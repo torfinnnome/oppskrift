@@ -1,0 +1,128 @@
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 37 71% 92%; /* #F9EEDD - Very light orange */
+    --foreground: 30 30% 25%; /* Dark Warm Brown for text */
+
+    --muted: 37 50% 85%;
+    --muted-foreground: 30 25% 45%;
+
+    --popover: 37 80% 95%;
+    --popover-foreground: 30 30% 25%;
+
+    --card: 37 80% 95%; /* Slightly lighter/more saturated than main bg */
+    --card-foreground: 30 30% 25%;
+
+    --border: 37 40% 80%; /* Subtle border */
+    --input: 37 50% 88%;
+
+    --primary: 34 100% 60%; /* #FFB347 - Light and warm orange */
+    --primary-foreground: 35 100% 98%; /* White/very light cream for text on primary */
+
+    --secondary: 43 60% 75%; /* Lighter muted yellow for secondary elements */
+    --secondary-foreground: 30 30% 25%;
+
+    --accent: 43 56% 58%; /* #D4A753 - Muted yellow */
+    --accent-foreground: 30 30% 25%; /* Darker color for text on accent */
+
+    --destructive: 0 70% 50%;
+    --destructive-foreground: 0 0% 100%;
+
+    --ring: 34 100% 70%; /* Slightly lighter primary for focus rings */
+
+    --radius: 0.5rem;
+
+    /* Custom Sidebar variables if needed, defaults are fine for now */
+    --sidebar-background: 37 71% 90%; /* Slightly darker than main bg for contrast */
+    --sidebar-foreground: 30 30% 20%;
+    --sidebar-primary: 34 100% 55%;
+    --sidebar-primary-foreground: 35 100% 98%;
+    --sidebar-accent: 43 56% 55%;
+    --sidebar-accent-foreground: 30 30% 20%;
+    --sidebar-border: 37 40% 75%;
+    --sidebar-ring: 34 100% 65%;
+  }
+
+  .dark {
+    /* Define dark theme based on current light theme, inverted and adjusted */
+    --background: 30 10% 15%; /* Dark warm gray/brown */
+    --foreground: 35 20% 85%; /* Light warm gray */
+
+    --muted: 30 10% 25%;
+    --muted-foreground: 35 15% 65%;
+
+    --popover: 30 10% 12%;
+    --popover-foreground: 35 20% 85%;
+
+    --card: 30 10% 20%;
+    --card-foreground: 35 20% 85%;
+
+    --border: 30 10% 30%;
+    --input: 30 10% 30%;
+
+    --primary: 34 100% 60%; /* Keep primary vibrant */
+    --primary-foreground: 30 30% 15%;
+
+    --secondary: 43 50% 40%;
+    --secondary-foreground: 35 20% 85%;
+
+    --accent: 43 56% 58%; /* Keep accent vibrant */
+    --accent-foreground: 30 30% 15%;
+
+    --destructive: 0 60% 45%;
+    --destructive-foreground: 0 0% 98%;
+
+    --ring: 34 100% 65%;
+
+    /* Custom Sidebar variables for dark theme */
+    --sidebar-background: 30 10% 12%;
+    --sidebar-foreground: 35 20% 80%;
+    --sidebar-primary: 34 100% 55%;
+    --sidebar-primary-foreground: 30 10% 10%;
+    --sidebar-accent: 43 56% 50%;
+    --sidebar-accent-foreground: 35 20% 80%;
+    --sidebar-border: 30 10% 25%;
+    --sidebar-ring: 34 100% 60%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1; /* Enable common ligatures */
+  }
+}
+
+/* Custom scrollbar for a cleaner look */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: hsl(var(--muted) / 0.5);
+  border-radius: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--accent) / 0.7);
+  border-radius: 10px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--accent));
+}
+
+/* Hide spinners on number inputs */
+.hide-number-spinners::-webkit-outer-spin-button,
+.hide-number-spinners::-webkit-inner-spin-button {
+  -webkit-appearance: none !important; /* Added !important */
+  margin: 0;
+}
+.hide-number-spinners {
+  -moz-appearance: textfield !important; /* Added !important for Firefox */
+}
