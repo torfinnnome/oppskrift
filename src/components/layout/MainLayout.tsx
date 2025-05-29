@@ -1,3 +1,4 @@
+
 import { type ReactNode } from "react";
 import { Header } from "@/components/layout/Header";
 import { siteConfig } from "@/config/site";
@@ -10,7 +11,7 @@ export function MainLayout({ children }: MainLayoutProps) {
   return (
     <div className="flex min-h-screen flex-col">
       <Header />
-      <main className="flex-1 container py-6 sm:py-8">
+      <main className="flex-1 container py-6 sm:py-8 px-4 md:px-6 lg:px-8">
         {children}
       </main>
       <footer className="py-6 md:px-8 md:py-0 border-t">

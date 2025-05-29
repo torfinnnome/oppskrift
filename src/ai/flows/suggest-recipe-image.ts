@@ -38,31 +38,38 @@ const suggestRecipeImageFlow = ai.defineFlow(
     outputSchema: SuggestRecipeImageOutputSchema,
   },
   async (input: SuggestRecipeImageInput) => {
-    const {media} = await ai.generate({
-      model: 'googleai/gemini-2.0-flash-exp',
-      prompt: `IMPORTANT: Generate a PURELY VISUAL, LOW-RESOLUTION image (ABSOLUTELY NO TEXT, NO WORDS, NO LETTERS, NO TYPOGRAPHY) that represents the recipe titled: "${input.recipeTitle}". The image should be in landscape orientation, wider than it is tall, for example with a 16:9 aspect ratio. CRITICAL: The image MUST have a small file size, suitable for a data URI and ideally under 500KB.`,
-      config: {
-        responseModalities: ['TEXT', 'IMAGE'], // Must provide both
-      },
-    });
+    // This is a simplified try...catch as the more detailed one was specific to API key issues
+    // which is not the case here. The error is a regional restriction.
+    try {
+      console.log(`[suggestRecipeImageFlow] Requesting image for title: "${input.recipeTitle}"`);
+      const {media} = await ai.generate({
+        model: 'googleai/gemini-2.0-flash-exp',
+        prompt: `IMPORTANT: Generate a PURELY VISUAL, LOW-RESOLUTION image (ABSOLUTELY NO TEXT, NO WORDS, NO LETTERS, NO TYPOGRAPHY) that represents the recipe titled: "${input.recipeTitle}". The image should be in landscape orientation, wider than it is tall, for example with a 16:9 aspect ratio. CRITICAL: The image MUST have a small file size, suitable for a data URI and ideally under 500KB.`,
+        config: {
+          responseModalities: ['TEXT', 'IMAGE'], // Must provide both
+        },
+      });
 
-    if (!media.url || !media.url.startsWith('data:')) {
-        throw new Error('AI did not return a valid data URI for the image.');
+      if (!media.url || !media.url.startsWith('data:')) {
+          console.error('[suggestRecipeImageFlow] AI did not return a valid data URI for the image. Media object:', media);
+          throw new Error('AI did not return a valid data URI for the image.');
+      }
+      
+      // Approximate check for image size to provide a warning.
+      // Base64 string length is roughly 4/3 times the original data size.
+      // Let's check if the data URI string itself is > 700,000 characters (approx 700KB string, might be ~500KB data)
+      // Firestore string field limit is ~1MB.
+      if (media.url.length > 700000) { 
+          console.warn(`[suggestRecipeImageFlow] Generated image data URI for "${input.recipeTitle}" is very large (length: ${media.url.length}). It might exceed Firestore limits even after client-side resizing. Consider Firebase Storage if this limit is frequently hit.`);
+      }
+      console.log(`[suggestRecipeImageFlow] Successfully generated image for title: "${input.recipeTitle}", Data URI length: ${media.url.length}`);
+      return {imageUri: media.url};
+
+    } catch (error) {
+      console.error('[suggestRecipeImageFlow] Error during image generation:', error);
+      // Re-throw the original error to be handled by the calling component
+      throw error;
     }
-
-    // Validate size (approximate check, actual byte size is after base64 decoding)
-    // Base64 string length is roughly 4/3 times the original data size.
-    // 1MB field limit = 1048576 bytes. Target 500KB for data URI string length to be safe.
-    // 500KB * 4/3 = ~666KB string length. Max Firestore string is ~1MB.
-    // Let's check if the data URI string itself is > 700,000 characters (rough check)
-    if (media.url.length > 700000) { // Approx 700KB string, might be ~500KB data
-        console.warn(`Generated image data URI for "${input.recipeTitle}" is very large (length: ${media.url.length}). It might exceed Firestore limits even after client-side resizing. Consider Firebase Storage if this limit is frequently hit.`);
-        // We'll still return it, but this warning is important.
-        // Client-side resizing will attempt to shrink it.
-    }
-
-    return {imageUri: media.url};
   }
 );
 
-    

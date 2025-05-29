@@ -7,7 +7,7 @@ Oppskrift is a modern, web-based application designed to help you manage your pe
 
 *   **Recipe Management:** Add, view, edit, and delete your personal recipes. Recipes can be marked as public (visible to all users, even unauthenticated if rules are set) or private (visible only to the creator).
 *   **Rich Recipe Details:** Store ingredients, multi-step instructions, serving sizes, prep/cook times, categories, and tags.
-*   **AI-Powered Image Suggestions:** Get relevant image suggestions for your recipes based on their titles, powered by Genkit and Gemini. Images are stored as data URIs after client-side resizing.
+*   **AI-Powered Image Suggestions:** Get relevant image suggestions for your recipes based on their titles, powered by Genkit and Gemini. Images are stored as data URIs after client-side resizing. (Note: Image generation availability may be subject to regional restrictions by the model provider).
 *   **Dynamic Ingredient Scaling:** Adjust serving sizes on the fly, and ingredient quantities will scale automatically.
 *   **Shopping List:** Add ingredients from recipes to a consolidated shopping list.
 *   **Filtering & Searching:** Easily find recipes by searching titles or by clicking on categories and tags.
@@ -92,7 +92,7 @@ service cloud.firestore {
 
       // OPTION 2: Public recipes are readable by ANYONE (even unauthenticated users).
       // Authenticated users can also read their own private recipes.
-      // THIS IS THE RULE TO USE FOR SHAREABLE PUBLIC RECIPES.
+      // THIS IS THE RECOMMENDED RULE FOR SHAREABLE PUBLIC RECIPES.
       allow read: if resource.data.isPublic == true || (request.auth != null && resource.data.createdBy == request.auth.uid);
       
       // Users can only create recipes for themselves.

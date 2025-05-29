@@ -29,6 +29,7 @@
   "generate_shopping_list": "Generar Lista de Compras",
   "no_recipes_found": "No se encontraron recetas. ¡Añade tu primera receta!",
   "search_recipes": "Buscar recetas...",
+  "search_recipes_placeholder_enhanced": "Buscar título, ingredientes, etiquetas...",
   "ingredient_name": "Nombre del Ingrediente",
   "quantity": "Cantidad",
   "unit": "Unidad",
@@ -36,7 +37,7 @@
   "remove_ingredient": "Eliminar Ingrediente",
   "drag_ingredient": "Arrastra para reordenar el ingrediente",
   "image_suggestion_loading": "Generando sugerencia de imagen...",
-  "image_suggestion_error": "No se pudo generar la sugerencia de imagen. Por favor, inténtalo de nuevo.",
+  "image_suggestion_error": "No se pudo generar la sugerencia de imagen. Por favor, inténtalo de nuevo o revisa los registros del servidor para más detalles.",
   "confirm_password": "Confirmar Contraseña",
   "passwords_do_not_match": "Las contraseñas no coinciden",
   "dashboard": "Panel",
@@ -179,7 +180,7 @@
   "image_processing_toast_desc": "Redimensionando y preparando tu imagen...",
   "image_still_too_large_error": "La imagen sugerida, incluso después de redimensionarla, es demasiado grande para guardarla. Intenta sugerir una imagen diferente o proporciona una más pequeña manualmente mediante URL.",
   "error_reorder_ingredient": "Error al reordenar los ingredientes.",
-  "error_reorder_ingredient_find": "Error: No se pudo encontrar el artículo arrastrado en la lista. Falló la reordenación. Actualice e intente nuevamente.",
+  "error_reorder_ingredient_find": "Error: No se pudo encontrar el artículo arrastrado. Falló la reordenación. Actualice e intente nuevamente.",
   "error_reorder_ingredient_find_critical": "Error: No se pudo encontrar el artículo arrastrado en la lista. Falló la reordenación.",
   "error_reorder_ingredient_move_failed": "Falló la reordenación de ingredientes debido a un error durante la operación de mover.",
   "ingredients_reordered": "Ingredientes reordenados correctamente.",
@@ -208,6 +209,21 @@
   "invalid_json_file_format": "Formato de archivo JSON inválido.",
   "error_reading_file": "Error al leer el archivo.",
   "unauthorized_action": "No estás autorizado para realizar esta acción.",
-  "password_change_requires_current": "Para cambiar su contraseña o correo electrónico, primero debe ingresar su contraseña actual."
+  "password_change_requires_current": "Para cambiar su contraseña o correo electrónico, primero debe ingresar su contraseña actual.",
+  "visibility_filter_label": "Filtrar por visibilidad",
+  "visibility_option_all_viewable": "Todas las Recetas Visibles",
+  "visibility_option_my_all": "Mis Recetas (Todas)",
+  "visibility_option_my_public": "Mis Recetas Públicas",
+  "visibility_option_my_private": "Mis Recetas Privadas",
+  "visibility_option_community_public": "Recetas Públicas de la Comunidad",
+  "active_filters": "Filtros Activos",
+  "clear_all_filters": "Limpiar Todos los Filtros",
+  "category": "Categoría",
+  "tag": "Etiqueta",
+  "no_recipes_found_for_visibility": "No se encontraron recetas para el filtro: {{filter}}.",
+  "no_recipes_found_for_search": "No se encontraron recetas para \"{{term}}\".",
+  "public_recipes_preview_title": "Recetas Públicas",
+  "login_to_see_more_public_recipes": "Inicia sesión para ver más"
 }
 
+    

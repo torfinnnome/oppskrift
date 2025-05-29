@@ -29,6 +29,7 @@
   "generate_shopping_list": "Generer handleliste",
   "no_recipes_found": "Ingen oppskrifter funnet. Legg til din første oppskrift!",
   "search_recipes": "Søk oppskrifter...",
+  "search_recipes_placeholder_enhanced": "Søk tittel, ingredienser, etiketter...",
   "ingredient_name": "Ingrediensnavn",
   "quantity": "Mengde",
   "unit": "Enhet",
@@ -36,7 +37,7 @@
   "remove_ingredient": "Fjern ingrediens",
   "drag_ingredient": "Dra for å endre rekkefølgen på ingrediensen",
   "image_suggestion_loading": "Genererer bildeforslag...",
-  "image_suggestion_error": "Kunne ikke generere bildeforslag. Vennligst prøv igjen.",
+  "image_suggestion_error": "Kunne ikke generere bildeforslag. Vennligst prøv igjen eller sjekk serverlogger for detaljer.",
   "confirm_password": "Bekreft passord",
   "passwords_do_not_match": "Passordene samsvarer ikke",
   "dashboard": "Dashbord",
@@ -179,7 +180,7 @@
   "image_processing_toast_desc": "Endrer størrelse og klargjør bildet ditt...",
   "image_still_too_large_error": "Det foreslåtte bildet, selv etter endring av størrelse, er for stort til å lagre. Prøv å foreslå et annet bilde eller oppgi et mindre manuelt via URL.",
   "error_reorder_ingredient": "Klarte ikke å endre rekkefølgen på ingrediensene.",
-  "error_reorder_ingredient_find": "Feil: Kunne ikke finne det dradde elementet i listen. Omorganisering feilet. Vennligst last inn siden på nytt og prøv igjen.",
+  "error_reorder_ingredient_find": "Feil: Kunne ikke finne det dradde elementet. Omorganisering feilet. Vennligst last inn siden på nytt og prøv igjen.",
   "error_reorder_ingredient_find_critical": "Feil: Kunne ikke finne det dradde elementet i listen. Omorganisering feilet.",
   "error_reorder_ingredient_move_failed": "Omorganisering av ingredienser feilet på grunn av en feil under flytteoperasjonen.",
   "ingredients_reordered": "Ingredienser omorganisert.",
@@ -208,6 +209,21 @@
   "invalid_json_file_format": "Ugyldig JSON-filformat.",
   "error_reading_file": "Feil ved lesing av fil.",
   "unauthorized_action": "Du har ikke tillatelse til å utføre denne handlingen.",
-  "password_change_requires_current": "For å endre passord eller e-post, må du først oppgi ditt nåværende passord."
+  "password_change_requires_current": "For å endre passord eller e-post, må du først oppgi ditt nåværende passord.",
+  "visibility_filter_label": "Filtrer etter synlighet",
+  "visibility_option_all_viewable": "Alle synlige oppskrifter",
+  "visibility_option_my_all": "Mine oppskrifter (alle)",
+  "visibility_option_my_public": "Mine offentlige oppskrifter",
+  "visibility_option_my_private": "Mine private oppskrifter",
+  "visibility_option_community_public": "Fellesskapets offentlige oppskrifter",
+  "active_filters": "Aktive filtre",
+  "clear_all_filters": "Fjern alle filtre",
+  "category": "Kategori",
+  "tag": "Etikett",
+  "no_recipes_found_for_visibility": "Ingen oppskrifter funnet for filter: {{filter}}.",
+  "no_recipes_found_for_search": "Ingen oppskrifter funnet for \"{{term}}\".",
+  "public_recipes_preview_title": "Offentlige oppskrifter",
+  "login_to_see_more_public_recipes": "Logg inn for å se mer"
 }
 
+    
