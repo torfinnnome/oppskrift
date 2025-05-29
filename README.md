@@ -16,6 +16,7 @@ Oppskrift is a modern, web-based application designed to help you manage your pe
 *   **Import/Export:** Users can export their recipes to a JSON file and import recipes from a JSON file.
 *   **Internationalization (i18n):** Supports multiple languages (English, Norwegian, Spanish).
 *   **Responsive Design:** Built with ShadCN UI components and Tailwind CSS for a clean experience on all devices.
+*   **Admin Functionality:** A designated admin user (defined by email) can delete any recipe in the system.
 
 ## Tech Stack
 
@@ -30,8 +31,18 @@ Oppskrift is a modern, web-based application designed to help you manage your pe
 
 To explore the app, take a look at the main page component located at `src/app/page.tsx`.
 
-Ensure your Firebase project is configured with Authentication (Email/Password provider enabled), Firestore, and the necessary API keys are set up in your `.env.local` file.
-```
+### Firebase Setup
+
+Ensure your Firebase project is configured with:
+1.  **Authentication:** Email/Password provider enabled.
+2.  **Firestore:** Database created (choose a region).
+3.  **API Keys:** Your web app's Firebase configuration keys.
+
+### Environment Variables
+
+Create a `.env.local` file in the root of your project and add the following variables:
+
+```env
 # Firebase Configuration (Required)
 NEXT_PUBLIC_FIREBASE_API_KEY="YOUR_API_KEY"
 NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN="YOUR_AUTH_DOMAIN"
@@ -45,7 +56,56 @@ GOOGLE_API_KEY="YOUR_GOOGLE_AI_STUDIO_API_KEY"
 
 # For determining the base URL for links in password reset emails (Required for password reset)
 NEXT_PUBLIC_APP_URL=http://localhost:9002 # Or your deployment URL
+
+# Admin User Configuration (Optional - for admin features)
+# Set the email of the user who should have admin privileges.
+NEXT_PUBLIC_ADMIN_USER_EMAIL="your_admin_email@example.com"
 ```
+**Restart your development server after creating or modifying the `.env.local` file.**
+
+### Firestore Security Rules
+
+For proper data protection and admin functionality, update your Firestore security rules. Go to your Firebase project -> Firestore Database -> Rules tab, and use the following:
+
+```json
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Function to check if the requesting user is the defined admin by UID
+    function isAdmin() {
+      // IMPORTANT: Replace "YOUR_ADMIN_USER_UID_HERE" with the actual
+      // UID of your admin user from the Firebase Authentication console.
+      // You can find this UID in the Firebase console under Authentication -> Users.
+      return request.auth.uid == "YOUR_ADMIN_USER_UID_HERE";
+    }
+
+    match /recipes/{recipeId} {
+      // Authenticated users can read any public recipe OR their own recipes (public or private).
+      allow read: if request.auth != null && (resource.data.isPublic == true || resource.data.createdBy == request.auth.uid);
+      // Optional: If you want even unauthenticated users to see public recipes, 
+      // you would modify the read rule:
+      // allow read: if resource.data.isPublic == true || (request.auth != null && resource.data.createdBy == request.auth.uid);
+
+      // Users can only create recipes for themselves.
+      allow create: if request.auth != null && request.resource.data.createdBy == request.auth.uid;
+      
+      // Users can only update their own recipes.
+      allow update: if request.auth != null && resource.data.createdBy == request.auth.uid;
+      
+      // Admin can delete any recipe, or owner can delete their own.
+      allow delete: if request.auth != null && (resource.data.createdBy == request.auth.uid || isAdmin());
+    }
+
+    // Placeholder for shopping lists - can be refined later
+    match /shoppingLists/{userId}/{document=**} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+  }
+}
+```
+**Remember to replace `"YOUR_ADMIN_USER_UID_HERE"` in the Firestore rules with the actual Firebase UID of your designated admin user.** You can find the UID in the Firebase console under Authentication -> Users tab.
 
 This project was initialized and developed in Firebase Studio.
-
+```
