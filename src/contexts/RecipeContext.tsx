@@ -17,7 +17,7 @@ import {
   where,
   writeBatch,
   getDocs,
-  Timestamp, // Import Timestamp
+  Timestamp, 
 } from "firebase/firestore";
 
 interface RecipeContextType {
@@ -37,7 +37,7 @@ const ensureIngredientIds = (ingredients: Partial<Ingredient>[]): Ingredient[] =
   return ingredients.map(ing => ({
     id: ing.id || uuidv4(),
     name: ing.name || '',
-    quantity: ing.quantity || '', // Keep as string
+    quantity: ing.quantity || '', 
     unit: ing.unit || ''
   })) as Ingredient[];
 };
@@ -45,85 +45,105 @@ const ensureIngredientIds = (ingredients: Partial<Ingredient>[]): Ingredient[] =
 export const RecipeProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [userOwnedRecipes, setUserOwnedRecipes] = useState<Recipe[]>([]);
-  const [publicRecipes, setPublicRecipes] = useState<Recipe[]>([]);
+  const [publicRecipesFromOthers, setPublicRecipesFromOthers] = useState<Recipe[]>([]);
   const [loading, setLoading] = useState(true);
   const { user } = useAuth(); 
 
   useEffect(() => {
+    if (!db) {
+      setRecipes([]);
+      setUserOwnedRecipes([]);
+      setPublicRecipesFromOthers([]);
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     const recipesCollectionRef = collection(db, "recipes");
     const unsubscribes: (() => void)[] = [];
 
-    if (user && db) {
+    if (user) {
+      // Fetch user's own recipes (public or private)
       const myRecipesQuery = query(recipesCollectionRef, where("createdBy", "==", user.uid));
       const unsubscribeMy = onSnapshot(myRecipesQuery, (snapshot) => {
         const userRecipesData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Recipe));
         setUserOwnedRecipes(userRecipesData);
       }, (error) => {
-        console.error("Error fetching user's recipes:", error);
+        console.error("[RecipeContext] Error fetching user's recipes:", error);
         setUserOwnedRecipes([]);
+        setLoading(false); 
       });
       unsubscribes.push(unsubscribeMy);
 
-      const publicRecipesQuery = query(recipesCollectionRef, where("isPublic", "==", true), where("createdBy", "!=", user.uid));
-      const unsubscribePublic = onSnapshot(publicRecipesQuery, (snapshot) => {
+      // Fetch public recipes NOT created by the user
+      const publicOthersQuery = query(
+        recipesCollectionRef,
+        where("isPublic", "==", true),
+        where("createdBy", "!=", user.uid)
+      );
+      const unsubscribePublicOthers = onSnapshot(publicOthersQuery, (snapshot) => {
         const publicRecipesData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Recipe));
-        setPublicRecipes(publicRecipesData);
+        setPublicRecipesFromOthers(publicRecipesData);
       }, (error) => {
-        console.error("Error fetching public recipes (excluding own):", error);
-        // If this query fails due to missing index, publicRecipes will be empty. User still sees their own.
-        // Firestore usually provides a link in the console error to create the required composite index.
-        setPublicRecipes([]); 
+        console.error("[RecipeContext] Error fetching public recipes from others:", error);
+        setPublicRecipesFromOthers([]);
       });
-      unsubscribes.push(unsubscribePublic);
+      unsubscribes.push(unsubscribePublicOthers);
 
-    } else if (db) {
-      setUserOwnedRecipes([]);
-      const publicRecipesQuery = query(recipesCollectionRef, where("isPublic", "==", true));
-      const unsubscribePublic = onSnapshot(publicRecipesQuery, (snapshot) => {
-        const recipesData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Recipe));
-        setPublicRecipes(recipesData);
-        setLoading(false);
+    } else { 
+      setUserOwnedRecipes([]); 
+      setPublicRecipesFromOthers([]); 
+      const publicQuery = query(recipesCollectionRef, where("isPublic", "==", true));
+      const unsubscribePublic = onSnapshot(publicQuery, (snapshot) => {
+        const publicRecipesData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Recipe));
+        setPublicRecipesFromOthers(publicRecipesData); 
+        setLoading(false); 
       }, (error) => {
-        console.error("Error fetching public recipes (logged out):", error);
-        setPublicRecipes([]);
+        console.error("[RecipeContext] Error fetching all public recipes (logged out):", error);
+        setPublicRecipesFromOthers([]);
         setLoading(false);
       });
       unsubscribes.push(unsubscribePublic);
-    } else {
-      setRecipes([]);
-      setUserOwnedRecipes([]);
-      setPublicRecipes([]);
-      setLoading(false);
     }
 
     return () => {
       unsubscribes.forEach(unsub => unsub());
     };
-  }, [user]);
+  }, [user, db]); 
 
   useEffect(() => {
     if (!db) {
-      setRecipes([]);
-      setLoading(false);
+      setLoading(false); 
       return;
     }
-    
+
     if (user) {
       const combined = [...userOwnedRecipes];
       const userRecipeIds = new Set(userOwnedRecipes.map(r => r.id));
       
-      publicRecipes.forEach(publicRecipe => {
-        if (!userRecipeIds.has(publicRecipe.id)) {
+      publicRecipesFromOthers.forEach(publicRecipe => {
+        if (!userRecipeIds.has(publicRecipe.id)) { 
           combined.push(publicRecipe);
         }
       });
       setRecipes(combined);
     } else {
-      setRecipes(publicRecipes);
+      setRecipes(publicRecipesFromOthers);
     }
-    setLoading(false);
-  }, [userOwnedRecipes, publicRecipes, user, db]);
+    
+    // Determine loading state more accurately based on whether both user and public recipes have been processed
+    if (user) {
+      // For logged-in user, consider loading complete if both their recipes and public-others have been processed.
+      // This logic might need refinement if one snapshot arrives much later than the other.
+      // A simple approach is to set loading false once the combined list is formed.
+      if (loading) setLoading(false);
+    } else {
+      // For logged-out user, loading is set false by the public recipes snapshot.
+      // This effect might run before/after, so check loading state.
+      if (loading) setLoading(false);
+    }
+
+  }, [userOwnedRecipes, publicRecipesFromOthers, user, db, loading]); 
 
   const addRecipe = async (recipeData: Omit<Recipe, "id" | "createdAt" | "updatedAt">): Promise<Recipe> => {
     if (!user || !db) throw new Error("User not authenticated or Firestore not initialized.");
@@ -143,7 +163,6 @@ export const RecipeProvider: React.FC<{ children: ReactNode }> = ({ children }) 
 
   const updateRecipe = async (updatedRecipe: Recipe): Promise<void> => {
     if (!user || !db) throw new Error("User not authenticated or Firestore not initialized.");
-    if (updatedRecipe.createdBy !== user.uid) throw new Error("User not authorized to update this recipe.");
 
     const recipeDocRef = doc(db, "recipes", updatedRecipe.id);
     const recipePayload = {
@@ -169,13 +188,13 @@ export const RecipeProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   const exportUserRecipes = async (): Promise<{ success: boolean; error?: string }> => {
     if (!user) return { success: false, error: "User not logged in." };
     
-    const userRecipes = recipes.filter(recipe => recipe.createdBy === user.uid);
-    if (userRecipes.length === 0) {
+    const userRecipesToExport = recipes.filter(recipe => recipe.createdBy === user.uid);
+    if (userRecipesToExport.length === 0) {
       return { success: false, error: "No recipes to export." };
     }
 
     try {
-      const jsonString = JSON.stringify(userRecipes, null, 2);
+      const jsonString = JSON.stringify(userRecipesToExport, null, 2);
       const blob = new Blob([jsonString], { type: "application/json" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -204,7 +223,6 @@ export const RecipeProvider: React.FC<{ children: ReactNode }> = ({ children }) 
 
       let importedCount = 0;
       for (const recipeObj of importedRecipeObjects) {
-        // Basic validation - could be expanded with Zod
         if (!recipeObj.title || !recipeObj.instructions || !Array.isArray(recipeObj.ingredients)) {
           console.warn("Skipping invalid recipe object during import:", recipeObj);
           continue;
@@ -221,10 +239,10 @@ export const RecipeProvider: React.FC<{ children: ReactNode }> = ({ children }) 
           prepTime: recipeObj.prepTime || "",
           cookTime: recipeObj.cookTime || "",
           imageUrl: recipeObj.imageUrl || "",
-          isPublic: recipeObj.isPublic === true, // Ensure boolean
-          createdBy: user.uid, // Assign to current user
+          isPublic: recipeObj.isPublic === true, 
+          createdBy: user.uid, 
         };
-        await addRecipe(recipeToImport); // addRecipe handles new timestamps and Firestore ID
+        await addRecipe(recipeToImport); 
         importedCount++;
       }
       return { success: true, count: importedCount };
@@ -233,7 +251,7 @@ export const RecipeProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       return { success: false, count: 0, error: e.message || "Failed to import recipes. Invalid JSON content." };
     }
   };
-
+  
   return (
     <RecipeContext.Provider value={{ recipes, addRecipe, updateRecipe, deleteRecipe, getRecipeById, loading, exportUserRecipes, importRecipes }}>
       {children}
