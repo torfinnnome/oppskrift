@@ -169,6 +169,7 @@
   "firebase_auth_errors.auth/network-request-failed": "Ha ocurrido un error de red (como tiempo de espera, conexión interrumpida o host inaccesible).",
   "firebase_auth_errors.auth/missing-action-code": "El código de acción no es válido. Esto puede suceder si el código está mal formado, ha expirado o ya se ha utilizado.",
   "firebase_auth_errors.auth/invalid-api-key": "Tu clave API de Firebase no es válida. Por favor, revisa la configuración de tu proyecto Firebase y asegúrate de que la clave API sea correcta, esté configurada correctamente en tu archivo .env.local y tenga los permisos necesarios en la consola de Google Cloud.",
+  "firebase_auth_errors.auth/invalid-credential": "La credencial proporcionada no es válida. Esto puede significar que la contraseña actual que ingresó es incorrecta.",
   "filtering_by_category": "Filtrando por categoría",
   "clear_filter": "Limpiar filtro",
   "no_recipes_found_for_category": "No se encontraron recetas para la categoría \"{{category}}\".",
@@ -205,5 +206,8 @@
   "error_importing_recipes": "Error al importar recetas.",
   "no_file_selected": "No se seleccionó ningún archivo.",
   "invalid_json_file_format": "Formato de archivo JSON inválido.",
-  "error_reading_file": "Error al leer el archivo."
+  "error_reading_file": "Error al leer el archivo.",
+  "unauthorized_action": "No estás autorizado para realizar esta acción.",
+  "password_change_requires_current": "Para cambiar su contraseña o correo electrónico, primero debe ingresar su contraseña actual."
 }
+

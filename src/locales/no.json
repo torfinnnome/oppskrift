@@ -169,6 +169,7 @@
   "firebase_auth_errors.auth/network-request-failed": "En nettverksfeil (som tidsavbrudd, brutt tilkobling eller utilgjengelig vert) har oppstått.",
   "firebase_auth_errors.auth/missing-action-code": "Handlingskoden er ugyldig. Dette kan skje hvis koden er feilformatert, utløpt eller allerede er brukt.",
   "firebase_auth_errors.auth/invalid-api-key": "Din firebase API-nøkkel er ikke gyldig. Vennligst sjekk Firebase-prosjektkonfigurasjonen din og forsikre deg om at API-nøkkelen er korrekt, riktig angitt i .env.local-filen din, og har de nødvendige tillatelsene i Google Cloud Console.",
+  "firebase_auth_errors.auth/invalid-credential": "Den oppgitte påloggingsinformasjonen er ugyldig. Dette kan bety at det nåværende passordet du skrev inn er feil.",
   "filtering_by_category": "Filtrerer etter kategori",
   "clear_filter": "Fjern filter",
   "no_recipes_found_for_category": "Ingen oppskrifter funnet for kategorien \"{{category}}\".",
@@ -205,5 +206,8 @@
   "error_importing_recipes": "Feil ved import av oppskrifter.",
   "no_file_selected": "Ingen fil valgt.",
   "invalid_json_file_format": "Ugyldig JSON-filformat.",
-  "error_reading_file": "Feil ved lesing av fil."
+  "error_reading_file": "Feil ved lesing av fil.",
+  "unauthorized_action": "Du har ikke tillatelse til å utføre denne handlingen.",
+  "password_change_requires_current": "For å endre passord eller e-post, må du først oppgi ditt nåværende passord."
 }
+

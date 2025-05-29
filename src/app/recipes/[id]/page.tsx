@@ -15,7 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { Clock, Users, Tag, Bookmark, Edit, Trash2, ShoppingCart, Minus, Plus, ArrowLeft, Globe, Eye, EyeOff } from "lucide-react"; // Added Globe
+import { Clock, Users, Tag, Bookmark, Edit, Trash2, ShoppingCart, Minus, Plus, ArrowLeft, Globe, EyeOff } from "lucide-react";
 import Link from "next/link";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -60,7 +60,7 @@ export default function RecipeDetailPage() {
   const recipeId = params.id as string;
   
   const { getRecipeById, deleteRecipe, loading: recipesLoading } = useRecipes();
-  const { user, loading: authLoading } = useAuth();
+  const { user, isAdmin, loading: authLoading } = useAuth(); // Added isAdmin
   const { addMultipleItems: addItemsToShoppingList } = useShoppingList();
   const { t } = useTranslation();
   
@@ -81,12 +81,13 @@ export default function RecipeDetailPage() {
   
   useEffect(() => {
     if (!authLoading && recipe) {
-      console.log("Recipe Detail Page - Auth/Recipe Data for Edit Button:");
+      console.log("Recipe Detail Page - Auth/Recipe Data for Edit/Delete Button:");
       console.log("User:", user ? { uid: user.uid, email: user.email, displayName: user.displayName } : null);
+      console.log("Is Admin:", isAdmin);
       console.log("Recipe createdBy:", recipe.createdBy);
       console.log("Is user owner of recipe:", user && recipe.createdBy === user.uid);
     }
-  }, [user, recipe, authLoading]);
+  }, [user, recipe, authLoading, isAdmin]);
   
   const scaledIngredients = useMemo(() => {
     if (!recipe || !recipe.ingredients) return [];
@@ -108,13 +109,19 @@ export default function RecipeDetailPage() {
 
   const handleDeleteRecipe = async () => {
     if (recipe && recipe.id) {
-      try {
-        await deleteRecipe(recipe.id);
-        toast({ title: t('recipe_deleted_successfully') }); 
-        router.push("/");
-      } catch (error) {
-        toast({ title: t('error_generic_title'), description: t('error_deleting_recipe'), variant: 'destructive' });
-        console.error("Error deleting recipe:", error);
+      // Security for delete is primarily handled by Firestore rules,
+      // but client-side check for isAdmin is good for UX.
+      if ((user && recipe.createdBy === user.uid) || isAdmin) {
+        try {
+          await deleteRecipe(recipe.id);
+          toast({ title: t('recipe_deleted_successfully') }); 
+          router.push("/");
+        } catch (error) {
+          toast({ title: t('error_generic_title'), description: t('error_deleting_recipe'), variant: 'destructive' });
+          console.error("Error deleting recipe:", error);
+        }
+      } else {
+        toast({ title: t('error_generic_title'), description: t('unauthorized_action'), variant: 'destructive' }); // New translation key
       }
     }
   };
@@ -156,7 +163,10 @@ export default function RecipeDetailPage() {
     return <div className="text-center py-10 text-xl text-muted-foreground">{t('recipe_not_found')}</div>;
   }
   
-  const canEditOrDelete = user && recipe.createdBy === user.uid;
+  const isOwner = user && recipe.createdBy === user.uid;
+  const canEdit = isOwner; // Only owners can edit
+  const canDelete = isOwner || isAdmin; // Owners or Admins can delete
+
   const isDataUrl = recipe.imageUrl && recipe.imageUrl.startsWith('data:image');
 
   return (
@@ -201,34 +211,36 @@ export default function RecipeDetailPage() {
                     </Badge>
                 )}
             </div>
-            {canEditOrDelete && (
-              <div className="flex gap-2 flex-shrink-0">
-                <Button variant="outline" size="icon" asChild>
-                  <Link href={`/recipes/${recipe.id}/edit`} aria-label={t('edit_recipe')}>
-                    <Edit className="h-4 w-4" />
-                  </Link>
-                </Button>
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button variant="destructive" size="icon" aria-label={t('delete_recipe')}>
-                      <Trash2 className="h-4 w-4" />
+            <div className="flex gap-2 flex-shrink-0">
+                {canEdit && (
+                    <Button variant="outline" size="icon" asChild>
+                        <Link href={`/recipes/${recipe.id}/edit`} aria-label={t('edit_recipe')}>
+                        <Edit className="h-4 w-4" />
+                        </Link>
                     </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>{t('confirm_delete_recipe')}</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        {t('this_action_cannot_be_undone')}
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>{t('cancel')}</AlertDialogCancel>
-                      <AlertDialogAction onClick={handleDeleteRecipe}>{t('delete')}</AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-              </div>
-            )}
+                )}
+                {canDelete && (
+                    <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                        <Button variant="destructive" size="icon" aria-label={t('delete_recipe')}>
+                            <Trash2 className="h-4 w-4" />
+                        </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                        <AlertDialogHeader>
+                            <AlertDialogTitle>{t('confirm_delete_recipe')}</AlertDialogTitle>
+                            <AlertDialogDescription>
+                            {t('this_action_cannot_be_undone')}
+                            </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                            <AlertDialogCancel>{t('cancel')}</AlertDialogCancel>
+                            <AlertDialogAction onClick={handleDeleteRecipe}>{t('delete')}</AlertDialogAction>
+                        </AlertDialogFooter>
+                        </AlertDialogContent>
+                    </AlertDialog>
+                )}
+             </div>
           </div>
           {recipe.description && <CardDescription className="text-lg text-muted-foreground pt-2">{recipe.description}</CardDescription>}
         </CardHeader>

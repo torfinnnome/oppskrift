@@ -169,6 +169,7 @@
   "firebase_auth_errors.auth/network-request-failed": "A network error (such as timeout, interrupted connection or unreachable host) has occurred.",
   "firebase_auth_errors.auth/missing-action-code": "The action code is invalid. This can happen if the code is malformed, expired, or has already been used.",
   "firebase_auth_errors.auth/invalid-api-key": "Your Firebase API key is not valid. Please check your Firebase project configuration and ensure the API key is correct, properly set in your .env.local file, and has the necessary permissions in the Google Cloud Console.",
+  "firebase_auth_errors.auth/invalid-credential": "The credential provided is invalid. This may mean the current password you entered is incorrect.",
   "filtering_by_category": "Filtering by category",
   "clear_filter": "Clear filter",
   "no_recipes_found_for_category": "No recipes found for category \"{{category}}\".",
@@ -205,5 +206,8 @@
   "error_importing_recipes": "Error importing recipes.",
   "no_file_selected": "No file selected.",
   "invalid_json_file_format": "Invalid JSON file format.",
-  "error_reading_file": "Error reading file."
+  "error_reading_file": "Error reading file.",
+  "unauthorized_action": "You are not authorized to perform this action.",
+  "password_change_requires_current": "To change your password or email, you must first enter your current password."
 }
+

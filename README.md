@@ -5,7 +5,7 @@ Oppskrift is a modern, web-based application designed to help you manage your pe
 
 ## Key Features
 
-*   **Recipe Management:** Add, view, edit, and delete your personal recipes. Recipes can be marked as public (visible to all users) or private (visible only to the creator).
+*   **Recipe Management:** Add, view, edit, and delete your personal recipes. Recipes can be marked as public (visible to all users, even unauthenticated if rules are set) or private (visible only to the creator).
 *   **Rich Recipe Details:** Store ingredients, multi-step instructions, serving sizes, prep/cook times, categories, and tags.
 *   **AI-Powered Image Suggestions:** Get relevant image suggestions for your recipes based on their titles, powered by Genkit and Gemini. Images are stored as data URIs after client-side resizing.
 *   **Dynamic Ingredient Scaling:** Adjust serving sizes on the fly, and ingredient quantities will scale automatically.
@@ -16,7 +16,7 @@ Oppskrift is a modern, web-based application designed to help you manage your pe
 *   **Import/Export:** Users can export their recipes to a JSON file and import recipes from a JSON file.
 *   **Internationalization (i18n):** Supports multiple languages (English, Norwegian, Spanish).
 *   **Responsive Design:** Built with ShadCN UI components and Tailwind CSS for a clean experience on all devices.
-*   **Admin Functionality:** A designated admin user (defined by email) can delete any recipe in the system.
+*   **Admin Functionality:** A designated admin user (defined by email and UID in Firestore rules) can delete any recipe in the system.
 
 ## Tech Stack
 
@@ -47,7 +47,7 @@ Create a `.env.local` file in the root of your project and add the following var
 NEXT_PUBLIC_FIREBASE_API_KEY="YOUR_API_KEY"
 NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN="YOUR_AUTH_DOMAIN"
 NEXT_PUBLIC_FIREBASE_PROJECT_ID="YOUR_PROJECT_ID"
-NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET="YOUR_STORAGE_BUCKET" # Required by Firebase SDK, even if not actively used for recipe images.
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET="YOUR_STORAGE_BUCKET" # Required by Firebase SDK
 NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID="YOUR_MESSAGING_SENDER_ID"
 NEXT_PUBLIC_FIREBASE_APP_ID="YOUR_APP_ID"
 
@@ -59,6 +59,8 @@ NEXT_PUBLIC_APP_URL=http://localhost:9002 # Or your deployment URL
 
 # Admin User Configuration (Optional - for admin features)
 # Set the email of the user who should have admin privileges.
+# This is used by the client-side to determine if admin UI should be shown.
+# Actual admin privileges are enforced by Firestore rules using the admin's UID.
 NEXT_PUBLIC_ADMIN_USER_EMAIL="your_admin_email@example.com"
 ```
 **Restart your development server after creating or modifying the `.env.local` file.**
@@ -82,12 +84,17 @@ service cloud.firestore {
     }
 
     match /recipes/{recipeId} {
-      // Authenticated users can read any public recipe OR their own recipes (public or private).
-      allow read: if request.auth != null && (resource.data.isPublic == true || resource.data.createdBy == request.auth.uid);
-      // Optional: If you want even unauthenticated users to see public recipes, 
-      // you would modify the read rule:
-      // allow read: if resource.data.isPublic == true || (request.auth != null && resource.data.createdBy == request.auth.uid);
+      // CHOOSE ONE of the following `allow read` rules based on your needs:
 
+      // OPTION 1: Only authenticated users can read recipes.
+      // They can read any public recipe OR their own private recipes.
+      // allow read: if request.auth != null && (resource.data.isPublic == true || resource.data.createdBy == request.auth.uid);
+
+      // OPTION 2: Public recipes are readable by ANYONE (even unauthenticated users).
+      // Authenticated users can also read their own private recipes.
+      // THIS IS THE RULE TO USE FOR SHAREABLE PUBLIC RECIPES.
+      allow read: if resource.data.isPublic == true || (request.auth != null && resource.data.createdBy == request.auth.uid);
+      
       // Users can only create recipes for themselves.
       allow create: if request.auth != null && request.resource.data.createdBy == request.auth.uid;
       

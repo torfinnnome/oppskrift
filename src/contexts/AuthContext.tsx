@@ -32,7 +32,7 @@ interface UpdateUserOptions {
 interface AuthContextType {
   user: User | null;
   loading: boolean;
-  // login and signup methods now align more with Firebase naming
+  isAdmin: boolean; // New admin flag
   signUp: (email: string, password: string, displayName?: string) => Promise<{ success: boolean; error?: string; errorCode?: string }>;
   logIn: (email: string, password: string) => Promise<{ success: boolean; error?: string; errorCode?: string }>;
   logOut: () => Promise<void>;
@@ -42,7 +42,6 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Helper to map Firebase User to your app's User type
 const mapFirebaseUserToAppUser = (firebaseUser: FirebaseUserType | null): User | null => {
   if (!firebaseUser) return null;
   return {
@@ -55,14 +54,23 @@ const mapFirebaseUserToAppUser = (firebaseUser: FirebaseUserType | null): User |
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const { t } = useTranslation(); // For toast messages
+  const [isAdmin, setIsAdmin] = useState(false); // Admin state
+  const { t } = useTranslation();
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(firebaseAuth, (firebaseUser) => {
-      setUser(mapFirebaseUserToAppUser(firebaseUser));
+      const appUser = mapFirebaseUserToAppUser(firebaseUser);
+      setUser(appUser);
+      // Check if the current user is an admin
+      const adminEmail = process.env.NEXT_PUBLIC_ADMIN_USER_EMAIL;
+      if (appUser && adminEmail && appUser.email === adminEmail) {
+        setIsAdmin(true);
+      } else {
+        setIsAdmin(false);
+      }
       setLoading(false);
     });
-    return () => unsubscribe(); // Cleanup subscription on unmount
+    return () => unsubscribe();
   }, []);
 
   const signUp = async (email: string, password: string, displayName?: string): Promise<{ success: boolean; error?: string; errorCode?: string }> => {
@@ -71,7 +79,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const userCredential = await createUserWithEmailAndPassword(firebaseAuth, email, password);
       if (userCredential.user && displayName) {
         await firebaseUpdateProfile(userCredential.user, { displayName });
-        // Re-fetch user to get displayName (onAuthStateChanged will also handle this)
          setUser(mapFirebaseUserToAppUser(firebaseAuth.currentUser));
       }
       setLoading(false);
@@ -87,7 +94,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setLoading(true);
     try {
       await signInWithEmailAndPassword(firebaseAuth, email, password);
-      // onAuthStateChanged will update the user state
       setLoading(false);
       return { success: true };
     } catch (error: any) {
@@ -101,7 +107,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setLoading(true);
     try {
       await signOut(firebaseAuth);
-      // onAuthStateChanged will set user to null
+      setIsAdmin(false); // Reset admin status on logout
     } catch (error: any) {
       console.error("Firebase LogOut Error:", error);
       toast({ title: t("error_generic_title"), description: t(`firebase_auth_errors.${error.code}`, t('error_generic_title')), variant: "destructive" });
@@ -116,7 +122,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     setLoading(true);
     try {
-      // Re-authentication is needed for email and password changes
       if ((updates.email || updates.newPassword) && currentPassword) {
         const credential = EmailAuthProvider.credential(currentUser.email!, currentPassword);
         await reauthenticateWithCredential(currentUser, credential);
@@ -135,8 +140,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         await firebaseUpdatePassword(currentUser, updates.newPassword);
       }
       
-      // Update local state immediately (onAuthStateChanged will also update but this can be faster UX)
       setUser(mapFirebaseUserToAppUser(firebaseAuth.currentUser));
+      // Re-check admin status if email might have changed, though admin email is usually static
+      const adminEmail = process.env.NEXT_PUBLIC_ADMIN_USER_EMAIL;
+      if (firebaseAuth.currentUser && adminEmail && firebaseAuth.currentUser.email === adminEmail) {
+        setIsAdmin(true);
+      } else {
+        setIsAdmin(false);
+      }
       setLoading(false);
       return { success: true };
 
@@ -162,7 +173,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
 
   return (
-    <AuthContext.Provider value={{ user, loading, signUp, logIn, logOut, updateUserProfile, sendUserPasswordResetEmail }}>
+    <AuthContext.Provider value={{ user, loading, isAdmin, signUp, logIn, logOut, updateUserProfile, sendUserPasswordResetEmail }}>
       {children}
     </AuthContext.Provider>
   );
