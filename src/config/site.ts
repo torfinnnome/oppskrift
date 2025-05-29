@@ -4,7 +4,7 @@ export const siteConfig = {
   name: "Oppskrift",
   description: "Your personal recipe book, simplified.",
   locales: ["en", "no", "es"],
-  defaultLocale: "en",
+  defaultLocale: "no",
   localeNames: {
     en: "English",
     no: "Norsk",
