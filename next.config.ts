@@ -13,11 +13,16 @@ const nextConfig: NextConfig = {
     remotePatterns: [
       {
         protocol: 'https',
-        hostname: 'placehold.co',
+        hostname: '**', // Allow any hostname
         port: '',
-        pathname: '/**',
+        pathname: '/**', // Allow any path
       },
-      // Removed Firebase Storage remote pattern
+      {
+        protocol: 'http',
+        hostname: '**', // Allow any hostname
+        port: '',
+        pathname: '/**', // Allow any path
+      },
     ],
   },
 };
