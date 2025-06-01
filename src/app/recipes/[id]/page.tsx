@@ -15,7 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { Clock, Users, Tag, Bookmark, Edit, Trash2, ShoppingCart, Minus, Plus, ArrowLeft, Globe, EyeOff, FileText, FileCode, Loader2 } from "lucide-react";
+import { Clock, Users, Tag, Bookmark, Edit, Trash2, ShoppingCart, Minus, Plus, ArrowLeft, Globe, EyeOff, FileText, FileCode, Loader2, Download } from "lucide-react";
 import Link from "next/link";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -29,6 +29,12 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { toast } from "@/hooks/use-toast";
 
 
@@ -226,14 +232,24 @@ export default function RecipeDetailPage() {
                 )}
             </div>
             <div className="flex gap-2 flex-shrink-0">
-                <Button variant="outline" size="sm" onClick={handleExportHTML} disabled={anyExportInProgress}>
-                  {isExportingHtml ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileCode className="mr-2 h-4 w-4" />}
-                  {t('export_as_html')}
-                </Button>
-                 <Button variant="outline" size="sm" onClick={handleExportMarkdown} disabled={anyExportInProgress}>
-                  {isExportingMarkdown ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileText className="mr-2 h-4 w-4" />}
-                  {t('export_as_markdown')}
-                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="icon" aria-label={t('export_recipe')} disabled={anyExportInProgress}>
+                      {anyExportInProgress ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={handleExportHTML} disabled={isExportingHtml}>
+                      <FileCode className="mr-2 h-4 w-4" />
+                      {t('export_as_html_item')}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={handleExportMarkdown} disabled={isExportingMarkdown}>
+                      <FileText className="mr-2 h-4 w-4" />
+                      {t('export_as_markdown_item')}
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+
                 {canEdit && (
                     <Button variant="outline" size="icon" asChild>
                         <Link href={`/recipes/${recipe.id}/edit`} aria-label={t('edit_recipe')}>
@@ -362,3 +378,4 @@ export default function RecipeDetailPage() {
     </div>
   );
 }
+

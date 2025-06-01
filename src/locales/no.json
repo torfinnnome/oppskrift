@@ -226,8 +226,9 @@
   "login_to_see_more_public_recipes": "Logg inn for å se mer",
   "export_all_html": "Eksporter alle som HTML",
   "export_all_markdown": "Eksporter alle som Markdown",
-  "export_as_html": "Eksporter som HTML",
-  "export_as_markdown": "Eksporter som Markdown",
+  "export_recipe": "Eksporter oppskrift",
+  "export_as_html_item": "som HTML",
+  "export_as_markdown_item": "som Markdown",
   "exporting_html": "Eksporterer HTML...",
   "exporting_markdown": "Eksporterer Markdown...",
   "recipes_exported_html_successfully": "Oppskrifter eksportert som HTML!",
@@ -238,3 +239,4 @@
   "error_exporting_markdown": "Feil ved eksport av Markdown.",
   "no_recipe_to_export": "Ingen oppskriftsdata å eksportere."
 }
+

@@ -226,8 +226,9 @@
   "login_to_see_more_public_recipes": "Login to see more",
   "export_all_html": "Export All as HTML",
   "export_all_markdown": "Export All as Markdown",
-  "export_as_html": "Export as HTML",
-  "export_as_markdown": "Export as Markdown",
+  "export_recipe": "Export Recipe",
+  "export_as_html_item": "as HTML",
+  "export_as_markdown_item": "as Markdown",
   "exporting_html": "Exporting HTML...",
   "exporting_markdown": "Exporting Markdown...",
   "recipes_exported_html_successfully": "Recipes exported as HTML successfully!",
@@ -238,3 +239,4 @@
   "error_exporting_markdown": "Error exporting Markdown.",
   "no_recipe_to_export": "No recipe data to export."
 }
+
