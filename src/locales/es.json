@@ -193,7 +193,7 @@
   "data_management": "Gestión de Datos",
   "data_management_description": "Exporta tus recetas o importa recetas desde un archivo.",
   "export_my_recipes": "Exportar Mis Recetas",
-  "export_my_recipes_button": "Exportar Mis Recetas",
+  "export_my_recipes_button": "Exportar como JSON",
   "export_recipes_description": "Descarga un archivo JSON que contiene todas tus recetas personales.",
   "import_recipes": "Importar Recetas",
   "import_recipes_button": "Importar Archivo Seleccionado",
@@ -201,9 +201,9 @@
   "select_json_file": "Seleccionar archivo JSON",
   "exporting": "Exportando...",
   "importing": "Importando...",
-  "recipes_exported_successfully": "¡Recetas exportadas correctamente!",
+  "recipes_exported_successfully": "¡Recetas exportadas como JSON correctamente!",
   "recipes_imported_successfully_count": "Se importaron {{count}} recetas correctamente.",
-  "error_exporting_recipes": "Error al exportar recetas.",
+  "error_exporting_recipes": "Error al exportar recetas (JSON).",
   "error_importing_recipes": "Error al importar recetas.",
   "no_file_selected": "No se seleccionó ningún archivo.",
   "invalid_json_file_format": "Formato de archivo JSON inválido.",
@@ -223,7 +223,18 @@
   "no_recipes_found_for_visibility": "No se encontraron recetas para el filtro: {{filter}}.",
   "no_recipes_found_for_search": "No se encontraron recetas para \"{{term}}\".",
   "public_recipes_preview_title": "Recetas Públicas",
-  "login_to_see_more_public_recipes": "Inicia sesión para ver más"
+  "login_to_see_more_public_recipes": "Inicia sesión para ver más",
+  "export_all_html": "Exportar Todo como HTML",
+  "export_all_markdown": "Exportar Todo como Markdown",
+  "export_as_html": "Exportar como HTML",
+  "export_as_markdown": "Exportar como Markdown",
+  "exporting_html": "Exportando HTML...",
+  "exporting_markdown": "Exportando Markdown...",
+  "recipes_exported_html_successfully": "¡Recetas exportadas como HTML correctamente!",
+  "recipes_exported_markdown_successfully": "¡Recetas exportadas como Markdown correctamente!",
+  "recipe_exported_html_successfully": "¡Receta exportada como HTML correctamente!",
+  "recipe_exported_markdown_successfully": "¡Receta exportada como Markdown correctamente!",
+  "error_exporting_html": "Error al exportar HTML.",
+  "error_exporting_markdown": "Error al exportar Markdown.",
+  "no_recipe_to_export": "No hay datos de receta para exportar."
 }
-
-    

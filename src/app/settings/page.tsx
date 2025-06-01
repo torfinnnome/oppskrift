@@ -2,27 +2,29 @@
 "use client";
 
 import { useAuth } from "@/contexts/AuthContext";
-import { useRecipes } from "@/contexts/RecipeContext"; // Import useRecipes
+import { useRecipes } from "@/contexts/RecipeContext"; 
 import { useRouter } from "next/navigation";
-import { useEffect, useState, useRef } from "react"; // Added useState, useRef
+import { useEffect, useState, useRef } from "react"; 
 import { useTranslation } from "@/lib/i18n";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Button } from "@/components/ui/button"; // Import Button
-import { Input } from "@/components/ui/input"; // Import Input
-import { toast } from "@/hooks/use-toast"; // Import toast
-import { Download, Upload, Loader2 } from "lucide-react"; // Import icons
+import { Button } from "@/components/ui/button"; 
+import { Input } from "@/components/ui/input"; 
+import { toast } from "@/hooks/use-toast"; 
+import { Download, Upload, Loader2, FileText, FileCode } from "lucide-react"; 
 
 export default function SettingsPage() {
   const { user, loading: authLoading } = useAuth();
-  const { exportUserRecipes, importRecipes, loading: recipesLoading } = useRecipes(); // Get recipe context functions
+  const { exportUserRecipes, importRecipes, exportUserRecipesAsHTML, exportUserRecipesAsMarkdown, loading: recipesLoading } = useRecipes(); 
   const router = useRouter();
   const { t } = useTranslation();
   
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [isExporting, setIsExporting] = useState(false);
+  const [isExportingJson, setIsExportingJson] = useState(false);
+  const [isExportingHtml, setIsExportingHtml] = useState(false);
+  const [isExportingMarkdown, setIsExportingMarkdown] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -40,15 +42,37 @@ export default function SettingsPage() {
     }
   };
 
-  const handleExport = async () => {
-    setIsExporting(true);
+  const handleExportJson = async () => {
+    setIsExportingJson(true);
     const result = await exportUserRecipes();
     if (result.success) {
       toast({ title: t('recipes_exported_successfully') });
     } else {
       toast({ title: t('error_exporting_recipes'), description: result.error || t('error_generic_title'), variant: "destructive" });
     }
-    setIsExporting(false);
+    setIsExportingJson(false);
+  };
+
+  const handleExportHtml = async () => {
+    setIsExportingHtml(true);
+    const result = await exportUserRecipesAsHTML();
+    if (result.success) {
+      toast({ title: t('recipes_exported_html_successfully') });
+    } else {
+      toast({ title: t('error_exporting_html'), description: result.error || t('error_generic_title'), variant: "destructive" });
+    }
+    setIsExportingHtml(false);
+  };
+
+  const handleExportMarkdown = async () => {
+    setIsExportingMarkdown(true);
+    const result = await exportUserRecipesAsMarkdown();
+    if (result.success) {
+      toast({ title: t('recipes_exported_markdown_successfully') });
+    } else {
+      toast({ title: t('error_exporting_markdown'), description: result.error || t('error_generic_title'), variant: "destructive" });
+    }
+    setIsExportingMarkdown(false);
   };
 
   const handleImport = async () => {
@@ -71,9 +95,9 @@ export default function SettingsPage() {
         toast({ title: t('error_reading_file'), variant: "destructive" });
       }
       setIsImporting(false);
-      setSelectedFile(null); // Reset file input
+      setSelectedFile(null); 
       if (fileInputRef.current) {
-        fileInputRef.current.value = ""; // Clear the file input display
+        fileInputRef.current.value = ""; 
       }
     };
     reader.onerror = () => {
@@ -83,7 +107,9 @@ export default function SettingsPage() {
     reader.readAsText(selectedFile);
   };
 
-  if (authLoading || !user) { // recipesLoading isn't strictly needed for initial page skeleton
+  const anyExportInProgress = isExportingJson || isExportingHtml || isExportingMarkdown;
+
+  if (authLoading || !user) { 
     return (
       <div className="space-y-6 max-w-xl mx-auto">
         <Skeleton className="h-10 w-1/3" />
@@ -139,10 +165,20 @@ export default function SettingsPage() {
           <div>
             <h3 className="text-lg font-medium mb-2">{t('export_my_recipes')}</h3>
             <p className="text-sm text-muted-foreground mb-3">{t('export_recipes_description')}</p>
-            <Button onClick={handleExport} disabled={isExporting || recipesLoading}>
-              {isExporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
-              {isExporting ? t('exporting') : t('export_my_recipes_button')}
-            </Button>
+            <div className="flex flex-wrap gap-2">
+              <Button onClick={handleExportJson} disabled={anyExportInProgress || recipesLoading}>
+                {isExportingJson ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
+                {isExportingJson ? t('exporting') : t('export_my_recipes_button')}
+              </Button>
+              <Button onClick={handleExportHtml} disabled={anyExportInProgress || recipesLoading} variant="outline">
+                {isExportingHtml ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileCode className="mr-2 h-4 w-4" />}
+                {isExportingHtml ? t('exporting_html') : t('export_all_html')}
+              </Button>
+              <Button onClick={handleExportMarkdown} disabled={anyExportInProgress || recipesLoading} variant="outline">
+                {isExportingMarkdown ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileText className="mr-2 h-4 w-4" />}
+                {isExportingMarkdown ? t('exporting_markdown') : t('export_all_markdown')}
+              </Button>
+            </div>
           </div>
           <hr className="my-6" />
           <div>

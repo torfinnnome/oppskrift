@@ -193,7 +193,7 @@
   "data_management": "Databehandling",
   "data_management_description": "Eksporter dine oppskrifter eller importer oppskrifter fra en fil.",
   "export_my_recipes": "Eksporter mine oppskrifter",
-  "export_my_recipes_button": "Eksporter mine oppskrifter",
+  "export_my_recipes_button": "Eksporter som JSON",
   "export_recipes_description": "Last ned en JSON-fil som inneholder alle dine personlige oppskrifter.",
   "import_recipes": "Importer oppskrifter",
   "import_recipes_button": "Importer valgt fil",
@@ -201,9 +201,9 @@
   "select_json_file": "Velg JSON-fil",
   "exporting": "Eksporterer...",
   "importing": "Importerer...",
-  "recipes_exported_successfully": "Oppskrifter eksportert!",
+  "recipes_exported_successfully": "Oppskrifter eksportert som JSON!",
   "recipes_imported_successfully_count": "{{count}} oppskrifter importert!",
-  "error_exporting_recipes": "Feil ved eksport av oppskrifter.",
+  "error_exporting_recipes": "Feil ved eksport av oppskrifter (JSON).",
   "error_importing_recipes": "Feil ved import av oppskrifter.",
   "no_file_selected": "Ingen fil valgt.",
   "invalid_json_file_format": "Ugyldig JSON-filformat.",
@@ -223,7 +223,18 @@
   "no_recipes_found_for_visibility": "Ingen oppskrifter funnet for filter: {{filter}}.",
   "no_recipes_found_for_search": "Ingen oppskrifter funnet for \"{{term}}\".",
   "public_recipes_preview_title": "Offentlige oppskrifter",
-  "login_to_see_more_public_recipes": "Logg inn for å se mer"
+  "login_to_see_more_public_recipes": "Logg inn for å se mer",
+  "export_all_html": "Eksporter alle som HTML",
+  "export_all_markdown": "Eksporter alle som Markdown",
+  "export_as_html": "Eksporter som HTML",
+  "export_as_markdown": "Eksporter som Markdown",
+  "exporting_html": "Eksporterer HTML...",
+  "exporting_markdown": "Eksporterer Markdown...",
+  "recipes_exported_html_successfully": "Oppskrifter eksportert som HTML!",
+  "recipes_exported_markdown_successfully": "Oppskrifter eksportert som Markdown!",
+  "recipe_exported_html_successfully": "Oppskrift eksportert som HTML!",
+  "recipe_exported_markdown_successfully": "Oppskrift eksportert som Markdown!",
+  "error_exporting_html": "Feil ved eksport av HTML.",
+  "error_exporting_markdown": "Feil ved eksport av Markdown.",
+  "no_recipe_to_export": "Ingen oppskriftsdata å eksportere."
 }
-
-    

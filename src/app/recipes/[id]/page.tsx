@@ -15,7 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { Clock, Users, Tag, Bookmark, Edit, Trash2, ShoppingCart, Minus, Plus, ArrowLeft, Globe, EyeOff } from "lucide-react";
+import { Clock, Users, Tag, Bookmark, Edit, Trash2, ShoppingCart, Minus, Plus, ArrowLeft, Globe, EyeOff, FileText, FileCode, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -59,13 +59,15 @@ export default function RecipeDetailPage() {
   const router = useRouter();
   const recipeId = params.id as string;
   
-  const { getRecipeById, deleteRecipe, loading: recipesLoading } = useRecipes();
-  const { user, isAdmin, loading: authLoading } = useAuth(); // Added isAdmin
+  const { getRecipeById, deleteRecipe, exportSingleRecipeAsHTML, exportSingleRecipeAsMarkdown, loading: recipesLoading } = useRecipes();
+  const { user, isAdmin, loading: authLoading } = useAuth(); 
   const { addMultipleItems: addItemsToShoppingList } = useShoppingList();
   const { t } = useTranslation();
   
   const [recipe, setRecipe] = useState<RecipeType | null | undefined>(undefined);
   const [numServings, setNumServings] = useState(1);
+  const [isExportingHtml, setIsExportingHtml] = useState(false);
+  const [isExportingMarkdown, setIsExportingMarkdown] = useState(false);
 
   useEffect(() => {
     if (recipeId && !recipesLoading) {
@@ -78,16 +80,6 @@ export default function RecipeDetailPage() {
       }
     }
   }, [recipeId, getRecipeById, recipesLoading]);
-  
-  useEffect(() => {
-    if (!authLoading && recipe) {
-      console.log("Recipe Detail Page - Auth/Recipe Data for Edit/Delete Button:");
-      console.log("User:", user ? { uid: user.uid, email: user.email, displayName: user.displayName } : null);
-      console.log("Is Admin:", isAdmin);
-      console.log("Recipe createdBy:", recipe.createdBy);
-      console.log("Is user owner of recipe:", user && recipe.createdBy === user.uid);
-    }
-  }, [user, recipe, authLoading, isAdmin]);
   
   const scaledIngredients = useMemo(() => {
     if (!recipe || !recipe.ingredients) return [];
@@ -109,8 +101,6 @@ export default function RecipeDetailPage() {
 
   const handleDeleteRecipe = async () => {
     if (recipe && recipe.id) {
-      // Security for delete is primarily handled by Firestore rules,
-      // but client-side check for isAdmin is good for UX.
       if ((user && recipe.createdBy === user.uid) || isAdmin) {
         try {
           await deleteRecipe(recipe.id);
@@ -121,7 +111,7 @@ export default function RecipeDetailPage() {
           console.error("Error deleting recipe:", error);
         }
       } else {
-        toast({ title: t('error_generic_title'), description: t('unauthorized_action'), variant: 'destructive' }); // New translation key
+        toast({ title: t('error_generic_title'), description: t('unauthorized_action'), variant: 'destructive' }); 
       }
     }
   };
@@ -139,6 +129,29 @@ export default function RecipeDetailPage() {
     toast({ title: t('items_added_to_shopping_list') });
   };
 
+  const handleExportHTML = async () => {
+    if (!recipe || !recipe.id) return;
+    setIsExportingHtml(true);
+    const result = await exportSingleRecipeAsHTML(recipe.id);
+    if (result.success) {
+      toast({ title: t('recipe_exported_html_successfully') });
+    } else {
+      toast({ title: t('error_exporting_html'), description: result.error || t('no_recipe_to_export'), variant: "destructive" });
+    }
+    setIsExportingHtml(false);
+  };
+
+  const handleExportMarkdown = async () => {
+    if (!recipe || !recipe.id) return;
+    setIsExportingMarkdown(true);
+    const result = await exportSingleRecipeAsMarkdown(recipe.id);
+    if (result.success) {
+      toast({ title: t('recipe_exported_markdown_successfully') });
+    } else {
+      toast({ title: t('error_exporting_markdown'), description: result.error || t('no_recipe_to_export'), variant: "destructive" });
+    }
+    setIsExportingMarkdown(false);
+  };
 
   if (recipesLoading || authLoading || recipe === undefined) {
     return (
@@ -164,8 +177,9 @@ export default function RecipeDetailPage() {
   }
   
   const isOwner = user && recipe.createdBy === user.uid;
-  const canEdit = isOwner; // Only owners can edit
-  const canDelete = isOwner || isAdmin; // Owners or Admins can delete
+  const canEdit = isOwner; 
+  const canDelete = isOwner || isAdmin; 
+  const anyExportInProgress = isExportingHtml || isExportingMarkdown;
 
   const isDataUrl = recipe.imageUrl && recipe.imageUrl.startsWith('data:image');
 
@@ -198,7 +212,7 @@ export default function RecipeDetailPage() {
           </div>
         )}
         <CardHeader className="pt-6">
-          <div className="flex justify-between items-start">
+          <div className="flex justify-between items-start flex-wrap gap-y-2">
             <div className="flex-grow">
                 <CardTitle className="text-3xl md:text-4xl font-bold">{recipe.title}</CardTitle>
                 {recipe.isPublic ? (
@@ -212,6 +226,14 @@ export default function RecipeDetailPage() {
                 )}
             </div>
             <div className="flex gap-2 flex-shrink-0">
+                <Button variant="outline" size="sm" onClick={handleExportHTML} disabled={anyExportInProgress}>
+                  {isExportingHtml ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileCode className="mr-2 h-4 w-4" />}
+                  {t('export_as_html')}
+                </Button>
+                 <Button variant="outline" size="sm" onClick={handleExportMarkdown} disabled={anyExportInProgress}>
+                  {isExportingMarkdown ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileText className="mr-2 h-4 w-4" />}
+                  {t('export_as_markdown')}
+                </Button>
                 {canEdit && (
                     <Button variant="outline" size="icon" asChild>
                         <Link href={`/recipes/${recipe.id}/edit`} aria-label={t('edit_recipe')}>
