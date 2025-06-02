@@ -6,6 +6,7 @@ import React, { createContext, useState, useContext, ReactNode, useEffect, useCa
 import { v4 as uuidv4 } from "uuid";
 import { db } from "@/firebase"; 
 import { useAuth } from "./AuthContext"; 
+import { useTranslation } from "@/lib/i18n"; // Import useTranslation
 import {
   collection,
   addDoc,
@@ -48,20 +49,20 @@ const ensureIngredientIds = (ingredients: Partial<Ingredient>[]): Ingredient[] =
 
 const slugify = (text: string) => text.toLowerCase().replace(/\s+/g, '-').replace(/[^\w-]+/g, '');
 
-const formatRecipeToHTML = (recipe: Recipe, forSingleView: boolean = false): string => {
+const formatRecipeToHTML = (recipe: Recipe, t: (key: string, params?:any) => string, forSingleView: boolean = false): string => {
   let html = `<div class="recipe" style="margin-bottom: 40px; padding-bottom: 20px; ${forSingleView ? '' : 'border-bottom: 2px solid #ccc;'}">`;
   html += `<h1 style="color: #333; margin-bottom: 5px;">${recipe.title}</h1>`;
   if (recipe.description) {
     html += `<p style="font-style: italic; color: #555; margin-top: 0;">${recipe.description}</p>`;
   }
   html += `<div class="meta" style="font-size: 0.9em; color: #777; margin-bottom: 15px;">`;
-  if (recipe.servings) html += `<span style="margin-right: 15px;"><strong>Servings:</strong> ${recipe.servings}</span>`;
-  if (recipe.prepTime) html += `<span style="margin-right: 15px;"><strong>Prep Time:</strong> ${recipe.prepTime}</span>`;
-  if (recipe.cookTime) html += `<span><strong>Cook Time:</strong> ${recipe.cookTime}</span>`;
+  if (recipe.servings) html += `<span style="margin-right: 15px;"><strong>${t('export_header_servings')}:</strong> ${recipe.servings}</span>`;
+  if (recipe.prepTime) html += `<span style="margin-right: 15px;"><strong>${t('export_header_prep_time')}:</strong> ${recipe.prepTime}</span>`;
+  if (recipe.cookTime) html += `<span><strong>${t('export_header_cook_time')}:</strong> ${recipe.cookTime}</span>`;
   html += `</div>`;
 
   if (recipe.ingredients && recipe.ingredients.length > 0) {
-    html += `<h2 style="color: #555; border-bottom: 1px solid #eee; padding-bottom: 5px; margin-top: 20px; margin-bottom: 10px;">Ingredients</h2>`;
+    html += `<h2 style="color: #555; border-bottom: 1px solid #eee; padding-bottom: 5px; margin-top: 20px; margin-bottom: 10px;">${t('export_header_ingredients')}</h2>`;
     html += `<ul style="margin-left: 20px; padding-left: 0; list-style-position: inside;">`;
     recipe.ingredients.forEach(ing => {
       html += `<li style="margin-bottom: 5px;">${ing.quantity || ''} ${ing.unit || ''} ${ing.name}</li>`;
@@ -70,33 +71,33 @@ const formatRecipeToHTML = (recipe: Recipe, forSingleView: boolean = false): str
   }
 
   if (recipe.instructions) {
-    html += `<h2 style="color: #555; border-bottom: 1px solid #eee; padding-bottom: 5px; margin-top: 20px; margin-bottom: 10px;">Instructions</h2>`;
+    html += `<h2 style="color: #555; border-bottom: 1px solid #eee; padding-bottom: 5px; margin-top: 20px; margin-bottom: 10px;">${t('export_header_instructions')}</h2>`;
     html += `<div style="white-space: pre-wrap;">${recipe.instructions.replace(/\n/g, '<br>')}</div>`;
   }
 
   if (recipe.categories && recipe.categories.length > 0) {
-    html += `<h2 style="color: #555; border-bottom: 1px solid #eee; padding-bottom: 5px; margin-top: 20px; margin-bottom: 10px;">Categories</h2>`;
+    html += `<h2 style="color: #555; border-bottom: 1px solid #eee; padding-bottom: 5px; margin-top: 20px; margin-bottom: 10px;">${t('export_header_categories')}</h2>`;
     html += `<p>${recipe.categories.join(", ")}</p>`;
   }
   if (recipe.tags && recipe.tags.length > 0) {
-    html += `<h2 style="color: #555; border-bottom: 1px solid #eee; padding-bottom: 5px; margin-top: 20px; margin-bottom: 10px;">Tags</h2>`;
+    html += `<h2 style="color: #555; border-bottom: 1px solid #eee; padding-bottom: 5px; margin-top: 20px; margin-bottom: 10px;">${t('export_header_tags')}</h2>`;
     html += `<p>${recipe.tags.join(", ")}</p>`;
   }
   html += `</div>`;
   return html;
 };
 
-const formatRecipeToMarkdown = (recipe: Recipe): string => {
+const formatRecipeToMarkdown = (recipe: Recipe, t: (key: string, params?:any) => string): string => {
   let md = `# ${recipe.title}\n\n`;
   if (recipe.description) {
     md += `_${recipe.description}_\n\n`;
   }
-  if (recipe.servings) md += `**Servings:** ${recipe.servings}\n`;
-  if (recipe.prepTime) md += `**Prep Time:** ${recipe.prepTime}\n`;
-  if (recipe.cookTime) md += `**Cook Time:** ${recipe.cookTime}\n\n`;
+  if (recipe.servings) md += `**${t('export_header_servings')}:** ${recipe.servings}\n`;
+  if (recipe.prepTime) md += `**${t('export_header_prep_time')}:** ${recipe.prepTime}\n`;
+  if (recipe.cookTime) md += `**${t('export_header_cook_time')}:** ${recipe.cookTime}\n\n`;
 
   if (recipe.ingredients && recipe.ingredients.length > 0) {
-    md += `## Ingredients\n\n`;
+    md += `## ${t('export_header_ingredients')}\n\n`;
     recipe.ingredients.forEach(ing => {
       md += `- ${ing.quantity || ''} ${ing.unit || ''} ${ing.name}\n`;
     });
@@ -104,14 +105,14 @@ const formatRecipeToMarkdown = (recipe: Recipe): string => {
   }
 
   if (recipe.instructions) {
-    md += `## Instructions\n\n${recipe.instructions}\n\n`;
+    md += `## ${t('export_header_instructions')}\n\n${recipe.instructions}\n\n`;
   }
 
   if (recipe.categories && recipe.categories.length > 0) {
-    md += `## Categories\n\n- ${recipe.categories.join("\n- ")}\n\n`;
+    md += `## ${t('export_header_categories')}\n\n- ${recipe.categories.join("\n- ")}\n\n`;
   }
   if (recipe.tags && recipe.tags.length > 0) {
-    md += `## Tags\n\n- ${recipe.tags.join("\n- ")}\n\n`;
+    md += `## ${t('export_header_tags')}\n\n- ${recipe.tags.join("\n- ")}\n\n`;
   }
   return md;
 };
@@ -123,6 +124,7 @@ export const RecipeProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   const [publicRecipesFromOthers, setPublicRecipesFromOthers] = useState<Recipe[]>([]);
   const [loading, setLoading] = useState(true);
   const { user } = useAuth(); 
+  const { t } = useTranslation(); // Get translation function
 
   useEffect(() => {
     if (!db) {
@@ -270,14 +272,14 @@ export const RecipeProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   const exportUserRecipesAsHTML = async (): Promise<{ success: boolean; error?: string }> => {
     if (!user) return { success: false, error: "User not logged in." };
     const userRecipesToExport = recipes.filter(recipe => recipe.createdBy === user.uid);
-    if (userRecipesToExport.length === 0) return { success: false, error: "No recipes to export." };
+    if (userRecipesToExport.length === 0) return { success: false, error: t('no_recipe_to_export') };
 
     try {
       let allRecipesHTML = `<!DOCTYPE html>
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>My Oppskrift Recipes</title>
+  <title>${t('export_html_title_my_recipes')}</title>
   <style>
     body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol"; line-height: 1.6; margin: 20px; color: #333; background-color: #fdfdfd; }
     .recipe { margin-bottom: 40px; padding: 20px; border: 1px solid #eee; border-radius: 8px; background-color: #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
@@ -294,7 +296,7 @@ export const RecipeProvider: React.FC<{ children: ReactNode }> = ({ children }) 
 </head>
 <body>`;
       userRecipesToExport.forEach(recipe => {
-        allRecipesHTML += formatRecipeToHTML(recipe, false);
+        allRecipesHTML += formatRecipeToHTML(recipe, t, false);
       });
       allRecipesHTML += `</body></html>`;
       const date = new Date().toISOString().split('T')[0];
@@ -309,10 +311,10 @@ export const RecipeProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   const exportUserRecipesAsMarkdown = async (): Promise<{ success: boolean; error?: string }> => {
     if (!user) return { success: false, error: "User not logged in." };
     const userRecipesToExport = recipes.filter(recipe => recipe.createdBy === user.uid);
-    if (userRecipesToExport.length === 0) return { success: false, error: "No recipes to export." };
+    if (userRecipesToExport.length === 0) return { success: false, error: t('no_recipe_to_export') };
 
     try {
-      const allRecipesMD = userRecipesToExport.map(recipe => formatRecipeToMarkdown(recipe)).join("\n\n---\n\n");
+      const allRecipesMD = userRecipesToExport.map(recipe => formatRecipeToMarkdown(recipe, t)).join("\n\n---\n\n");
       const date = new Date().toISOString().split('T')[0];
       triggerDownload(allRecipesMD, `oppskrift_recipes_export_${date}.md`, "text/markdown;charset=utf-8");
       return { success: true };
@@ -324,13 +326,13 @@ export const RecipeProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   
   const exportSingleRecipeAsHTML = async (recipeId: string): Promise<{ success: boolean; error?: string }> => {
     const recipe = getRecipeById(recipeId);
-    if (!recipe) return { success: false, error: "Recipe not found." };
+    if (!recipe) return { success: false, error: t('no_recipe_to_export') };
     try {
       const htmlContent = `<!DOCTYPE html>
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>Recipe: ${recipe.title}</title>
+  <title>${t('export_html_title_recipe', { title: recipe.title })}</title>
   <style>
     body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol"; line-height: 1.6; margin: 20px; color: #333; background-color: #fdfdfd; }
     .recipe { margin-bottom: 40px; padding: 20px; border: 1px solid #eee; border-radius: 8px; background-color: #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
@@ -345,7 +347,7 @@ export const RecipeProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     .categories-tags p { margin-top: 5px; }
   </style>
 </head>
-<body>${formatRecipeToHTML(recipe, true)}</body></html>`;
+<body>${formatRecipeToHTML(recipe, t, true)}</body></html>`;
       openContentInNewTab(htmlContent, "text/html;charset=utf-8");
       return { success: true };
     } catch (e: any) {
@@ -356,9 +358,9 @@ export const RecipeProvider: React.FC<{ children: ReactNode }> = ({ children }) 
 
   const exportSingleRecipeAsMarkdown = async (recipeId: string): Promise<{ success: boolean; error?: string }> => {
     const recipe = getRecipeById(recipeId);
-    if (!recipe) return { success: false, error: "Recipe not found." };
+    if (!recipe) return { success: false, error: t('no_recipe_to_export') };
     try {
-      const mdContent = formatRecipeToMarkdown(recipe);
+      const mdContent = formatRecipeToMarkdown(recipe, t);
       openContentInNewTab(mdContent, "text/plain;charset=utf-8");
       return { success: true };
     } catch (e: any) {
@@ -373,7 +375,7 @@ export const RecipeProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     
     const userRecipesToExport = recipes.filter(recipe => recipe.createdBy === user.uid);
     if (userRecipesToExport.length === 0) {
-      return { success: false, error: "No recipes to export." };
+      return { success: false, error: t('no_recipe_to_export') };
     }
 
     try {

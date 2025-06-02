@@ -237,6 +237,14 @@
   "recipe_exported_markdown_successfully": "Recipe exported as Markdown successfully!",
   "error_exporting_html": "Error exporting HTML.",
   "error_exporting_markdown": "Error exporting Markdown.",
-  "no_recipe_to_export": "No recipe data to export."
+  "no_recipe_to_export": "No recipe data to export.",
+  "export_header_servings": "Servings",
+  "export_header_prep_time": "Prep Time",
+  "export_header_cook_time": "Cook Time",
+  "export_header_ingredients": "Ingredients",
+  "export_header_instructions": "Instructions",
+  "export_header_categories": "Categories",
+  "export_header_tags": "Tags",
+  "export_html_title_my_recipes": "My Oppskrift Recipes",
+  "export_html_title_recipe": "Recipe: {{title}}"
 }
-
