@@ -31,8 +31,8 @@ interface RecipeContextType {
   importRecipes: (jsonString: string) => Promise<{ success: boolean; count: number; error?: string }>;
   exportUserRecipesAsHTML: () => Promise<{ success: boolean; error?: string }>;
   exportUserRecipesAsMarkdown: () => Promise<{ success: boolean; error?: string }>;
-  exportSingleRecipeAsHTML: (recipeId: string) => Promise<{ success: boolean; error?: string, filename?: string }>;
-  exportSingleRecipeAsMarkdown: (recipeId: string) => Promise<{ success: boolean; error?: string, filename?: string }>;
+  exportSingleRecipeAsHTML: (recipeId: string) => Promise<{ success: boolean; error?: string }>;
+  exportSingleRecipeAsMarkdown: (recipeId: string) => Promise<{ success: boolean; error?: string }>;
 }
 
 const RecipeContext = createContext<RecipeContextType | undefined>(undefined);
@@ -48,8 +48,8 @@ const ensureIngredientIds = (ingredients: Partial<Ingredient>[]): Ingredient[] =
 
 const slugify = (text: string) => text.toLowerCase().replace(/\s+/g, '-').replace(/[^\w-]+/g, '');
 
-const formatRecipeToHTML = (recipe: Recipe): string => {
-  let html = `<div class="recipe" style="margin-bottom: 40px; padding-bottom: 20px; border-bottom: 2px solid #ccc;">`;
+const formatRecipeToHTML = (recipe: Recipe, forSingleView: boolean = false): string => {
+  let html = `<div class="recipe" style="margin-bottom: 40px; padding-bottom: 20px; ${forSingleView ? '' : 'border-bottom: 2px solid #ccc;'}">`;
   html += `<h1 style="color: #333; margin-bottom: 5px;">${recipe.title}</h1>`;
   if (recipe.description) {
     html += `<p style="font-style: italic; color: #555; margin-top: 0;">${recipe.description}</p>`;
@@ -203,11 +203,7 @@ export const RecipeProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     }
     setRecipes(combinedRecipes);
 
-    if (loading) { // Only set loading to false if it was true
-        // A more robust loading check would involve tracking if initial loads for all relevant queries have completed.
-        // For now, if user exists, loading primarily depends on userOwnedRecipes and publicRecipesFromOthers.
-        // If user doesn't exist, it depends on publicRecipesFromOthers.
-        // This simplified check sets loading to false once recipes are combined.
+    if (loading) { 
         setLoading(false);
     }
   }, [userOwnedRecipes, publicRecipesFromOthers, user, db, loading]);
@@ -264,6 +260,13 @@ export const RecipeProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     URL.revokeObjectURL(url);
   };
 
+  const openContentInNewTab = (content: string, contentType: string) => {
+    const blob = new Blob([content], { type: contentType });
+    const url = URL.createObjectURL(blob);
+    window.open(url, '_blank');
+    // The object URL will be revoked automatically when the tab/window is closed or the document is unloaded.
+  };
+
   const exportUserRecipesAsHTML = async (): Promise<{ success: boolean; error?: string }> => {
     if (!user) return { success: false, error: "User not logged in." };
     const userRecipesToExport = recipes.filter(recipe => recipe.createdBy === user.uid);
@@ -291,11 +294,11 @@ export const RecipeProvider: React.FC<{ children: ReactNode }> = ({ children }) 
 </head>
 <body>`;
       userRecipesToExport.forEach(recipe => {
-        allRecipesHTML += formatRecipeToHTML(recipe);
+        allRecipesHTML += formatRecipeToHTML(recipe, false);
       });
       allRecipesHTML += `</body></html>`;
       const date = new Date().toISOString().split('T')[0];
-      triggerDownload(allRecipesHTML, `oppskrift_recipes_export_${date}.html`, "text/html");
+      triggerDownload(allRecipesHTML, `oppskrift_recipes_export_${date}.html`, "text/html;charset=utf-8");
       return { success: true };
     } catch (e: any) {
       console.error("Error exporting recipes as HTML:", e);
@@ -311,7 +314,7 @@ export const RecipeProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     try {
       const allRecipesMD = userRecipesToExport.map(recipe => formatRecipeToMarkdown(recipe)).join("\n\n---\n\n");
       const date = new Date().toISOString().split('T')[0];
-      triggerDownload(allRecipesMD, `oppskrift_recipes_export_${date}.md`, "text/markdown");
+      triggerDownload(allRecipesMD, `oppskrift_recipes_export_${date}.md`, "text/markdown;charset=utf-8");
       return { success: true };
     } catch (e: any) {
       console.error("Error exporting recipes as Markdown:", e);
@@ -319,7 +322,7 @@ export const RecipeProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     }
   };
   
-  const exportSingleRecipeAsHTML = async (recipeId: string): Promise<{ success: boolean; error?: string, filename?: string }> => {
+  const exportSingleRecipeAsHTML = async (recipeId: string): Promise<{ success: boolean; error?: string }> => {
     const recipe = getRecipeById(recipeId);
     if (!recipe) return { success: false, error: "Recipe not found." };
     try {
@@ -342,24 +345,22 @@ export const RecipeProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     .categories-tags p { margin-top: 5px; }
   </style>
 </head>
-<body>${formatRecipeToHTML(recipe)}</body></html>`;
-      const filename = `oppskrift_${slugify(recipe.title)}.html`;
-      triggerDownload(htmlContent, filename, "text/html");
-      return { success: true, filename };
+<body>${formatRecipeToHTML(recipe, true)}</body></html>`;
+      openContentInNewTab(htmlContent, "text/html;charset=utf-8");
+      return { success: true };
     } catch (e: any) {
       console.error("Error exporting single recipe as HTML:", e);
       return { success: false, error: e.message || "Failed to export recipe as HTML." };
     }
   };
 
-  const exportSingleRecipeAsMarkdown = async (recipeId: string): Promise<{ success: boolean; error?: string, filename?: string }> => {
+  const exportSingleRecipeAsMarkdown = async (recipeId: string): Promise<{ success: boolean; error?: string }> => {
     const recipe = getRecipeById(recipeId);
     if (!recipe) return { success: false, error: "Recipe not found." };
     try {
       const mdContent = formatRecipeToMarkdown(recipe);
-      const filename = `oppskrift_${slugify(recipe.title)}.md`;
-      triggerDownload(mdContent, filename, "text/markdown");
-      return { success: true, filename };
+      openContentInNewTab(mdContent, "text/plain;charset=utf-8");
+      return { success: true };
     } catch (e: any) {
       console.error("Error exporting single recipe as Markdown:", e);
       return { success: false, error: e.message || "Failed to export recipe as Markdown." };
@@ -378,7 +379,7 @@ export const RecipeProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     try {
       const jsonString = JSON.stringify(userRecipesToExport, null, 2);
       const date = new Date().toISOString().split('T')[0];
-      triggerDownload(jsonString, `oppskrift_recipes_export_${date}.json`, "application/json");
+      triggerDownload(jsonString, `oppskrift_recipes_export_${date}.json`, "application/json;charset=utf-8");
       return { success: true };
     } catch (e: any) {
       console.error("Error exporting recipes:", e);
