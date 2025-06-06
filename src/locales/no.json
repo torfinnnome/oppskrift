@@ -311,5 +311,7 @@
   "unauthorized_action_rate_private": "Du kan kun vurdere offentlige oppskrifter eller dine egne private oppskrifter.",
   "invalid_rating_value": "Ugyldig vurderingsverdi. Vennligst velg mellom 1 og 5 stjerner.",
   "stars_short": "stjerner",
-  "be_the_first_to_rate": "Bli den første til å vurdere!"
+  "be_the_first_to_rate": "Bli den første til å vurdere!",
+  "clear_rating_tooltip": "Fjern vurdering ({{count}} stjerne)"
 }
+

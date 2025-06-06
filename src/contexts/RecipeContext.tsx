@@ -17,7 +17,7 @@ import {
   query,
   where,
   or,
-  getDoc, // Added for fetching a single doc for rating
+  getDoc,
 } from "firebase/firestore";
 
 interface RecipeContextType {
@@ -69,7 +69,7 @@ const ensureIngredientGroupStructure = (groups: Partial<IngredientGroup>[], t: (
   return groups.map(group => ({
     id: group.id || uuidv4(),
     fieldId: group.fieldId || uuidv4(),
-    name: group.name || t('default_ingredient_group_name'),
+    name: group.name || "", // Default to empty string to be handled by display logic
     ingredients: ensureIngredientStructure(group.ingredients || [])
   })) as IngredientGroup[];
 };
@@ -227,7 +227,7 @@ export const RecipeProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       ingredientGroupsData = docData.ingredientGroups.map((group: any) => ({
         id: group.id || uuidv4(),
         fieldId: group.fieldId || uuidv4(),
-        name: group.name || t('default_ingredient_group_name'),
+        name: group.name || "",
         ingredients: ensureIngredientStructure(group.ingredients || [])
       }));
     } else if (docData.ingredients && Array.isArray(docData.ingredients)) { 
@@ -344,7 +344,7 @@ export const RecipeProvider: React.FC<{ children: ReactNode }> = ({ children }) 
 
     const recipeDocRef = doc(db, "recipes", updatedRecipe.id);
     const recipePayload = {
-      ...updatedRecipe, // Includes existing ratings, averageRating, numRatings
+      ...updatedRecipe, 
       servingsValue: Number(updatedRecipe.servingsValue),
       servingsUnit: updatedRecipe.servingsUnit,
       ingredientGroups: ensureIngredientGroupStructure(updatedRecipe.ingredientGroups || [], t),
@@ -385,11 +385,17 @@ export const RecipeProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     if (!currentRecipe.isPublic && currentRecipe.createdBy !== user.uid) {
       throw new Error(t("unauthorized_action_rate_private"));
     }
-    if (rating < 1 || rating > 5) {
+    if (rating < 0 || rating > 5) { // Allow 0 for clearing
       throw new Error(t("invalid_rating_value"));
     }
 
-    const newRatings = { ...(currentRecipe.ratings || {}), [userId]: rating };
+    const newRatings = { ...(currentRecipe.ratings || {}) };
+    if (rating === 0) { // Clear the vote
+      delete newRatings[userId];
+    } else { // Set or update the vote
+      newRatings[userId] = rating;
+    }
+    
     const ratingValues = Object.values(newRatings);
     const newNumRatings = ratingValues.length;
     const newAverageRating = newNumRatings > 0 ? ratingValues.reduce((sum, r) => sum + r, 0) / newNumRatings : 0;
@@ -566,7 +572,7 @@ export const RecipeProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         if (recipeObj.ingredientGroups && Array.isArray(recipeObj.ingredientGroups)) {
             ingredientGroupsToImport = recipeObj.ingredientGroups.map((group: any) => ({
                 id: group.id || uuidv4(),
-                name: group.name || t('default_ingredient_group_name'),
+                name: group.name || "",
                 ingredients: ensureIngredientStructure(group.ingredients || [])
             }));
         } else if (recipeObj.ingredients && Array.isArray(recipeObj.ingredients)) { 
@@ -621,3 +627,4 @@ export const useRecipes = (): RecipeContextType => {
   if (context === undefined) throw new Error("useRecipes must be used within a RecipeProvider");
   return context;
 };
+

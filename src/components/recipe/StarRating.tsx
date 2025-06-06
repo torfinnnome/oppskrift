@@ -40,7 +40,12 @@ export const StarRating: React.FC<StarRatingProps> = ({
 
   const handleClick = (index: number) => {
     if (!interactive || !onRate) return;
-    onRate(index);
+    // If clicking the same star as the current rating, clear it (send 0)
+    if (index === rating) {
+      onRate(0);
+    } else {
+      onRate(index);
+    }
   };
 
   return (
@@ -50,7 +55,11 @@ export const StarRating: React.FC<StarRatingProps> = ({
         // isFilled is true if the star is part of the current rating or current hover action
         const isFilled = starValue <= (hoverRating || rating);
         
-        const starTitle = showTooltip ? t('star_label', { count: starValue }) : undefined;
+        const starTitleKey = starValue === rating && interactive 
+          ? 'clear_rating_tooltip' 
+          : 'star_label';
+        const starTitle = showTooltip ? t(starTitleKey, { count: starValue }) : undefined;
+
 
         return (
           <button
@@ -65,7 +74,7 @@ export const StarRating: React.FC<StarRatingProps> = ({
               interactive ? "cursor-pointer" : "cursor-default",
               "focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 rounded-sm"
             )}
-            aria-label={t('star_label', { count: starValue })}
+            aria-label={t('star_label', { count: starValue })} // General label for accessibility
             title={starTitle}
           >
             <Star
@@ -73,10 +82,8 @@ export const StarRating: React.FC<StarRatingProps> = ({
               className={cn(
                 'transition-colors duration-150 ease-in-out',
                 isFilled
-                  ? 'text-amber-400 fill-amber-400' // Star is "active" due to current rating or hover
-                  : 'text-muted-foreground/40 fill-muted-foreground/10', // Star is "inactive", made fainter
-                // If interactive and this star is part of the *actual saved* rating (not just hover)
-                // and the user hovers over it, dim it slightly.
+                  ? 'text-amber-400 fill-amber-400'
+                  : 'text-muted-foreground/40 fill-muted-foreground/10',
                 interactive && (starValue <= rating) && 'hover:opacity-80'
               )}
             />
@@ -86,3 +93,4 @@ export const StarRating: React.FC<StarRatingProps> = ({
     </div>
   );
 };
+

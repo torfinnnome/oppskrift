@@ -311,5 +311,7 @@
   "unauthorized_action_rate_private": "You can only rate public recipes or your own private recipes.",
   "invalid_rating_value": "Invalid rating value. Please choose between 1 and 5 stars.",
   "stars_short": "stars",
-  "be_the_first_to_rate": "Be the first to rate!"
+  "be_the_first_to_rate": "Be the first to rate!",
+  "clear_rating_tooltip": "Clear rating ({{count}} star)"
 }
+

@@ -311,5 +311,7 @@
   "unauthorized_action_rate_private": "Solo puedes valorar recetas públicas o tus propias recetas privadas.",
   "invalid_rating_value": "Valor de valoración inválido. Por favor, elige entre 1 y 5 estrellas.",
   "stars_short": "estrellas",
-  "be_the_first_to_rate": "¡Sé el primero en valorar!"
+  "be_the_first_to_rate": "¡Sé el primero en valorar!",
+  "clear_rating_tooltip": "Borrar valoración ({{count}} estrella)"
 }
+
