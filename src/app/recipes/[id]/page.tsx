@@ -16,11 +16,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Clock, Users, Tag, Bookmark, Edit, Trash2, ShoppingCart, Minus, Plus, ArrowLeft, Globe, EyeOff, FileText, FileCode, Loader2, Download, Smartphone, Info, Lightbulb, Utensils } from "lucide-react";
+import { Clock, Users, Tag, Bookmark, Edit, Trash2, ShoppingCart, Minus, Plus, ArrowLeft, Globe, EyeOff, FileText, FileCode, Loader2, Download, Smartphone, Info, Lightbulb, Utensils, Star as StarIcon } from "lucide-react";
 import Link from "next/link";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { StarRating } from "@/components/recipe/StarRating"; // Import StarRating
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
@@ -34,11 +35,10 @@ interface ScaledIngredientGroup extends Omit<IngredientGroupType, 'ingredients'>
   ingredients: { name: string; quantity: string; unit: string; id: string; }[];
 }
 
-// Helper function to find URLs and wrap them in <a> tags
 const linkifyText = (text: string): React.ReactNode[] => {
   if (!text) return [];
   const urlRegex = /(https?:\/\/[^\s]+)/g;
-  const parts = text.split(urlRegex); // This splits and includes the delimiters (URLs) in the array
+  const parts = text.split(urlRegex); 
 
   return parts.map((part, index) => {
     if (part.match(urlRegex)) {
@@ -54,7 +54,7 @@ const linkifyText = (text: string): React.ReactNode[] => {
         </a>
       );
     }
-    return part; // This will be a string
+    return part; 
   });
 };
 
@@ -64,7 +64,7 @@ export default function RecipeDetailPage() {
   const router = useRouter();
   const recipeId = params.id as string;
 
-  const { getRecipeById, deleteRecipe, exportSingleRecipeAsHTML, exportSingleRecipeAsMarkdown, loading: recipesLoading } = useRecipes();
+  const { getRecipeById, deleteRecipe, exportSingleRecipeAsHTML, exportSingleRecipeAsMarkdown, submitRecipeRating, loading: recipesLoading } = useRecipes();
   const { user, isAdmin, loading: authLoading } = useAuth();
   const { addMultipleItems: addItemsToShoppingList } = useShoppingList();
   const { t } = useTranslation();
@@ -88,13 +88,13 @@ export default function RecipeDetailPage() {
         
         const initialInstructionStates: Record<string, boolean> = {};
         (foundRecipe.instructions || []).forEach(step => {
-          initialInstructionStates[step.id] = false; // Always start unchecked
+          initialInstructionStates[step.id] = false;
         });
         setInstructionStepStates(initialInstructionStates);
 
         const initialTipStates: Record<string, boolean> = {};
         (foundRecipe.tips || []).forEach(tip => {
-          initialTipStates[tip.id] = false; // Always start unchecked
+          initialTipStates[tip.id] = false;
         });
         setTipStepStates(initialTipStates);
 
@@ -125,8 +125,6 @@ export default function RecipeDetailPage() {
 
   const scaledIngredientGroups: ScaledIngredientGroup[] = useMemo(() => {
     if (!recipe || !recipe.ingredientGroups) return [];
-    // Use the context's scaling function for display consistency, if available, or local one
-    // For this detail page, direct use of the local/imported scaleIngredientQuantityForDisplay is fine.
     const scaleIngredientQuantityForDisplay = (quantityStr: string, originalServingsValue: number, newServingsValue: number): string => {
         if (typeof quantityStr !== 'string') return '';
         const quantityNum = parseFloat(quantityStr.replace(',', '.'));
@@ -200,6 +198,20 @@ export default function RecipeDetailPage() {
     }));
   }, []);
 
+  const handleRateRecipe = async (newRating: number) => {
+    if (!recipe || !user) {
+      toast({ title: t('must_be_logged_in_to_rate'), variant: "destructive" });
+      return;
+    }
+    try {
+      await submitRecipeRating(recipe.id, user.uid, newRating);
+      toast({ title: t('rating_submitted_successfully') });
+      // The context will update the recipe list, and this component will re-render
+    } catch (error: any) {
+      toast({ title: t('error_submitting_rating'), description: error.message || t('error_generic_title'), variant: "destructive" });
+    }
+  };
+
 
   if (recipesLoading || authLoading || recipe === undefined) {
     return <div className="max-w-3xl mx-auto space-y-6"> <Skeleton className="h-12 w-3/4" /> <Skeleton className="h-64 w-full rounded-lg" /> <div className="grid md:grid-cols-3 gap-6"> <div className="md:col-span-1 space-y-4"><Skeleton className="h-8 w-full" /><Skeleton className="h-32 w-full" /></div> <div className="md:col-span-2 space-y-4"><Skeleton className="h-8 w-1/2" /><Skeleton className="h-48 w-full" /></div> </div> </div>;
@@ -211,6 +223,8 @@ export default function RecipeDetailPage() {
   const anyExportInProgress = isExportingHtml || isExportingMarkdown;
   
   const displayServingsUnit = recipe.servingsUnit === 'pieces' ? t('servings_unit_pieces') : t('servings_unit_servings');
+  const canVoteOnRecipe = user && (recipe.isPublic || recipe.createdBy === user.uid);
+  const currentUserRating = user ? recipe.ratings?.[user.uid] || 0 : 0;
 
   return (
     <div className="max-w-4xl mx-auto">
@@ -237,11 +251,33 @@ export default function RecipeDetailPage() {
           {recipe.description && <CardDescription className="text-lg text-muted-foreground pt-2">{recipe.description}</CardDescription>}
         </CardHeader>
         <CardContent className="py-6 space-y-8">
-          <div className="grid md:grid-cols-3 gap-6 text-sm">
+          <div className="grid md:grid-cols-3 gap-6 text-sm items-center">
             {recipe.prepTime && <div className="flex items-center gap-2"><Clock className="h-5 w-5 text-primary" /><div><strong>{t('prep_time')}:</strong> {recipe.prepTime}</div></div>}
             {recipe.cookTime && <div className="flex items-center gap-2"><Clock className="h-5 w-5 text-primary" /><div><strong>{t('cook_time')}:</strong> {recipe.cookTime}</div></div>}
             <div className="flex items-center gap-2"><Utensils className="h-5 w-5 text-primary" /><div><strong>{t('servings')}:</strong> {recipe.servingsValue} {displayServingsUnit}</div></div>
           </div>
+
+          <div className="space-y-2">
+            <Label className="text-base font-medium">{canVoteOnRecipe ? t('your_rating') : t('average_rating_label')}:</Label>
+            <div className="flex items-center gap-2">
+              <StarRating
+                rating={currentUserRating || recipe.averageRating || 0}
+                onRate={canVoteOnRecipe ? handleRateRecipe : undefined}
+                interactive={canVoteOnRecipe}
+                size={24}
+                showTooltip={canVoteOnRecipe}
+              />
+              {(recipe.numRatings || 0) > 0 && (
+                <span className="text-sm text-muted-foreground">
+                  ({recipe.averageRating?.toFixed(1)} {t('stars_short')} / {recipe.numRatings} {recipe.numRatings === 1 ? t('vote_singular') : t('votes_plural')})
+                </span>
+              )}
+               {!canVoteOnRecipe && user && (recipe.numRatings || 0) === 0 && recipe.isPublic && (
+                <span className="text-sm text-muted-foreground">{t('be_the_first_to_rate')}</span>
+              )}
+            </div>
+          </div>
+
           <Separator />
           <div className="grid md:grid-cols-3 gap-x-8 gap-y-6">
             <div className="md:col-span-1 space-y-6">

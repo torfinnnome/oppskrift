@@ -17,14 +17,16 @@ import {
   query,
   where,
   or,
+  getDoc, // Added for fetching a single doc for rating
 } from "firebase/firestore";
 
 interface RecipeContextType {
   recipes: Recipe[];
-  addRecipe: (recipe: Omit<Recipe, "id" | "createdAt" | "updatedAt">) => Promise<Recipe>; 
+  addRecipe: (recipe: Omit<Recipe, "id" | "createdAt" | "updatedAt" | "ratings" | "averageRating" | "numRatings">) => Promise<Recipe>; 
   updateRecipe: (recipe: Recipe) => Promise<void>;
   deleteRecipe: (recipeId: string) => Promise<void>;
   getRecipeById: (recipeId: string) => Recipe | undefined;
+  submitRecipeRating: (recipeId: string, userId: string, rating: number) => Promise<void>;
   loading: boolean;
   exportUserRecipes: () => Promise<{ success: boolean; error?: string }>;
   importRecipes: (jsonString: string) => Promise<{ success: boolean; count: number; error?: string }>;
@@ -36,7 +38,6 @@ interface RecipeContextType {
 
 const RecipeContext = createContext<RecipeContextType | undefined>(undefined);
 
-// Moved from recipe detail page for use in export functions
 const scaleIngredientQuantity = (quantityStr: string, originalServingsValue: number, newServingsValue: number): string => {
   if (typeof quantityStr !== 'string') return '';
   const quantityNum = parseFloat(quantityStr.replace(',', '.'));
@@ -259,6 +260,9 @@ export const RecipeProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       categories: Array.isArray(docData.categories) ? docData.categories : [],
       createdAt: docData.createdAt || new Date().toISOString(),
       updatedAt: docData.updatedAt || new Date().toISOString(),
+      ratings: docData.ratings || {},
+      averageRating: docData.averageRating || 0,
+      numRatings: docData.numRatings || 0,
     } as Recipe;
   }, [t]);
 
@@ -299,7 +303,7 @@ export const RecipeProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   }, [user, mapFirestoreDocToRecipe]); 
 
 
-  const addRecipe = async (recipeData: Omit<Recipe, "id" | "createdAt" | "updatedAt">): Promise<Recipe> => {
+  const addRecipe = async (recipeData: Omit<Recipe, "id" | "createdAt" | "updatedAt" | "ratings" | "averageRating" | "numRatings">): Promise<Recipe> => {
     if (!user || !db) throw new Error(t("user_not_authenticated_or_firestore_not_initialized"));
     
     const newRecipeData = {
@@ -313,6 +317,9 @@ export const RecipeProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       createdBy: user.uid, 
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
+      ratings: {},
+      averageRating: 0,
+      numRatings: 0,
     };
 
     const cleanedIngredientGroups = newRecipeData.ingredientGroups.map(group => ({
@@ -337,7 +344,7 @@ export const RecipeProvider: React.FC<{ children: ReactNode }> = ({ children }) 
 
     const recipeDocRef = doc(db, "recipes", updatedRecipe.id);
     const recipePayload = {
-      ...updatedRecipe,
+      ...updatedRecipe, // Includes existing ratings, averageRating, numRatings
       servingsValue: Number(updatedRecipe.servingsValue),
       servingsUnit: updatedRecipe.servingsUnit,
       ingredientGroups: ensureIngredientGroupStructure(updatedRecipe.ingredientGroups || [], t),
@@ -361,6 +368,38 @@ export const RecipeProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     delete (payloadToSave as any).servings; 
 
     await updateDoc(recipeDocRef, payloadToSave);
+  };
+
+  const submitRecipeRating = async (recipeId: string, userId: string, rating: number): Promise<void> => {
+    if (!user || !db) throw new Error(t("user_not_authenticated_or_firestore_not_initialized"));
+    
+    const recipeDocRef = doc(db, "recipes", recipeId);
+    const recipeSnap = await getDoc(recipeDocRef);
+
+    if (!recipeSnap.exists()) {
+      throw new Error(t("recipe_not_found"));
+    }
+
+    const currentRecipe = mapFirestoreDocToRecipe(recipeSnap.data(), recipeId);
+
+    if (!currentRecipe.isPublic && currentRecipe.createdBy !== user.uid) {
+      throw new Error(t("unauthorized_action_rate_private"));
+    }
+    if (rating < 1 || rating > 5) {
+      throw new Error(t("invalid_rating_value"));
+    }
+
+    const newRatings = { ...(currentRecipe.ratings || {}), [userId]: rating };
+    const ratingValues = Object.values(newRatings);
+    const newNumRatings = ratingValues.length;
+    const newAverageRating = newNumRatings > 0 ? ratingValues.reduce((sum, r) => sum + r, 0) / newNumRatings : 0;
+
+    await updateDoc(recipeDocRef, {
+      ratings: newRatings,
+      averageRating: newAverageRating,
+      numRatings: newNumRatings,
+      updatedAt: new Date().toISOString(),
+    });
   };
 
   const deleteRecipe = async (recipeId: string): Promise<void> => {
@@ -547,7 +586,7 @@ export const RecipeProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         const servingsUnit = recipeObj.servingsUnit || 'servings' as ServingsUnit;
 
 
-        const recipeToImport: Omit<Recipe, "id" | "createdAt" | "updatedAt"> = {
+        const recipeToImport: Omit<Recipe, "id" | "createdAt" | "updatedAt" | "ratings" | "averageRating" | "numRatings"> = {
           title: recipeObj.title,
           description: recipeObj.description || "",
           ingredientGroups: ingredientGroupsToImport,
@@ -571,7 +610,7 @@ export const RecipeProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   };
   
   return (
-    <RecipeContext.Provider value={{ recipes, addRecipe, updateRecipe, deleteRecipe, getRecipeById, loading, exportUserRecipes, importRecipes, exportUserRecipesAsHTML, exportUserRecipesAsMarkdown, exportSingleRecipeAsHTML, exportSingleRecipeAsMarkdown }}>
+    <RecipeContext.Provider value={{ recipes, addRecipe, updateRecipe, deleteRecipe, getRecipeById, submitRecipeRating, loading, exportUserRecipes, importRecipes, exportUserRecipesAsHTML, exportUserRecipesAsMarkdown, exportSingleRecipeAsHTML, exportSingleRecipeAsMarkdown }}>
       {children}
     </RecipeContext.Provider>
   );
@@ -582,6 +621,3 @@ export const useRecipes = (): RecipeContextType => {
   if (context === undefined) throw new Error("useRecipes must be used within a RecipeProvider");
   return context;
 };
-
-
-    

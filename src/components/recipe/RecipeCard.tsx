@@ -6,7 +6,7 @@ import Link from "next/link";
 import NextImage from "next/image";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Clock, Tag, Bookmark, Globe, Utensils } from "lucide-react"; // Changed Users to Utensils
+import { Clock, Tag, Bookmark, Globe, Utensils, Star } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
 
 interface RecipeCardProps {
@@ -86,11 +86,18 @@ export function RecipeCard({ recipe }: RecipeCardProps) {
             </Link>
           ))}
         </div>
+         {(recipe.numRatings || 0) > 0 && (
+          <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
+            <Star className="h-3.5 w-3.5 text-amber-400 fill-amber-400" />
+            <span className="font-medium text-foreground">{recipe.averageRating?.toFixed(1)}</span>
+            <span>({recipe.numRatings} {recipe.numRatings === 1 ? t('vote_singular') : t('votes_plural')})</span>
+          </div>
+        )}
       </CardContent>
       <CardFooter className="p-4 border-t">
         <div className="flex justify-between items-center w-full text-xs text-muted-foreground">
           <div className="flex items-center gap-1">
-            <Utensils className="h-3 w-3" /> {/* Changed from Users */}
+            <Utensils className="h-3 w-3" /> 
             <span>{recipe.servingsValue} {displayServingsUnitShort}</span>
           </div>
           {(recipe.prepTime || recipe.cookTime) && (

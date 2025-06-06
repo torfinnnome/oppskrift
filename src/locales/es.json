@@ -155,8 +155,6 @@
   "unauthorized_edit_recipe": "No estás autorizado para editar esta receta.",
   "must_be_logged_in": "Debes iniciar sesión para realizar esta acción.",
   "ingredient_name_required": "El nombre del ingrediente es obligatorio.",
-  "quantity_required": "La cantidad es obligatoria.",
-  "unit_required": "La unidad es obligatoria.",
   "title_min_length": "El título debe tener al menos 3 caracteres.",
   "ingredients_min_length": "Se requiere al menos un ingrediente.",
   "instructions_min_length": "Las instrucciones deben tener al menos 10 caracteres.",
@@ -284,7 +282,6 @@
   "remove_ingredient_group": "Eliminar Grupo de Ingredientes",
   "ingredient_group_name_label": "Nombre del Grupo",
   "ingredient_group_name_placeholder": "Ej: Para el pastel",
-  "group_name_required": "El nombre del grupo de ingredientes es obligatorio.",
   "group_ingredients_min_length": "Cada grupo debe tener al menos un ingrediente.",
   "ingredient_groups_min_length": "Se requiere al menos un grupo de ingredientes.",
   "default_ingredient_group_name": "Ingredientes",
@@ -300,7 +297,19 @@
   "no_instructions_provided": "No se proporcionaron instrucciones para esta receta.",
   "user_not_authenticated_or_firestore_not_initialized": "Usuario no autenticado o Firestore no inicializado.",
   "error_updating_step_status": "Error al actualizar el estado de finalización del paso.",
-  "toggle_step_completion_aria": "Alternar finalización para el paso {{stepNumber}}"
+  "toggle_step_completion_aria": "Alternar finalización para el paso {{stepNumber}}",
+  "vote_singular": "voto",
+  "votes_plural": "votos",
+  "rate_this_recipe": "Valora esta receta",
+  "your_rating": "Tu valoración",
+  "average_rating_label": "Valoración Media",
+  "star_rating_aria_label": "Valoración de {{count}} estrellas",
+  "star_label": "Estrella {{count}}",
+  "must_be_logged_in_to_rate": "Debes iniciar sesión para valorar recetas.",
+  "rating_submitted_successfully": "¡Valoración enviada correctamente!",
+  "error_submitting_rating": "Error al enviar la valoración.",
+  "unauthorized_action_rate_private": "Solo puedes valorar recetas públicas o tus propias recetas privadas.",
+  "invalid_rating_value": "Valor de valoración inválido. Por favor, elige entre 1 y 5 estrellas.",
+  "stars_short": "estrellas",
+  "be_the_first_to_rate": "¡Sé el primero en valorar!"
 }
-
-    

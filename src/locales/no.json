@@ -155,8 +155,6 @@
   "unauthorized_edit_recipe": "Du har ikke tillatelse til å redigere denne oppskriften.",
   "must_be_logged_in": "Du må være logget inn for å utføre denne handlingen.",
   "ingredient_name_required": "Ingrediensnavn er påkrevd.",
-  "quantity_required": "Mengde er påkrevd.",
-  "unit_required": "Enhet er påkrevd.",
   "title_min_length": "Tittelen må være minst 3 tegn.",
   "ingredients_min_length": "Minst én ingrediens er påkrevd.",
   "instructions_min_length": "Instruksjonene må være minst 10 tegn.",
@@ -276,7 +274,7 @@
   "tips_description": "Del nyttige hint, variasjoner eller serveringsideer.",
   "keep_screen_on_label": "Behold skjermen på",
   "keep_screen_on_label_short": "Skjerm på",
-  "keep_screen_on_tooltip": "Forhindrer at skjermen på enheten din slår seg av mens du ser på denne oppskriften. Nyttig under matlaging!",
+  "keep_screen_on_tooltip": "Forhindrer at skjermen på enheten din slår seg av mens du ser på denne oppskriften. Nyttig under matlaking!",
   "wake_lock_error_title": "Skjermlåsfeil",
   "wake_lock_error_unavailable": "Kunne ikke aktivere 'Behold skjermen på'. Nettleseren din støtter kanskje ikke denne funksjonen, eller den ble nektet.",
   "ingredient_groups_label": "Ingrediensgrupper",
@@ -284,7 +282,6 @@
   "remove_ingredient_group": "Fjern ingrediensgruppe",
   "ingredient_group_name_label": "Gruppenavn",
   "ingredient_group_name_placeholder": "f.eks. Til kaken",
-  "group_name_required": "Navn på ingrediensgruppe er påkrevd.",
   "group_ingredients_min_length": "Hver gruppe må ha minst én ingrediens.",
   "ingredient_groups_min_length": "Minst én ingrediensgruppe er påkrevd.",
   "default_ingredient_group_name": "Ingredienser",
@@ -300,7 +297,19 @@
   "no_instructions_provided": "Ingen instruksjoner gitt for denne oppskriften.",
   "user_not_authenticated_or_firestore_not_initialized": "Bruker ikke autentisert eller Firestore ikke initialisert.",
   "error_updating_step_status": "Feil ved oppdatering av fullføringsstatus for trinn.",
-  "toggle_step_completion_aria": "Veksle fullføring for trinn {{stepNumber}}"
+  "toggle_step_completion_aria": "Veksle fullføring for trinn {{stepNumber}}",
+  "vote_singular": "stemme",
+  "votes_plural": "stemmer",
+  "rate_this_recipe": "Vurder denne oppskriften",
+  "your_rating": "Din vurdering",
+  "average_rating_label": "Gjennomsnittlig vurdering",
+  "star_rating_aria_label": "{{count}}-stjerners vurdering",
+  "star_label": "Stjerne {{count}}",
+  "must_be_logged_in_to_rate": "Du må være logget inn for å vurdere oppskrifter.",
+  "rating_submitted_successfully": "Vurdering sendt!",
+  "error_submitting_rating": "Feil ved sending av vurdering.",
+  "unauthorized_action_rate_private": "Du kan kun vurdere offentlige oppskrifter eller dine egne private oppskrifter.",
+  "invalid_rating_value": "Ugyldig vurderingsverdi. Vennligst velg mellom 1 og 5 stjerner.",
+  "stars_short": "stjerner",
+  "be_the_first_to_rate": "Bli den første til å vurdere!"
 }
-
-    

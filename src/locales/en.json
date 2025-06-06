@@ -69,7 +69,7 @@
   "this_action_cannot_be_undone": "This action cannot be undone and will permanently delete the recipe.",
   "scale_servings": "Adjust yield for",
   "decrease_servings": "Decrease yield",
-  "increase_servings": "Increase yield",
+  "increase_servings": "Aumentar rendimiento",
   "number_of_servings": "Number of units",
   "add_to_shopping_list": "Add to Shopping List",
   "app_preferences": "App Preferences",
@@ -155,8 +155,6 @@
   "unauthorized_edit_recipe": "You are not authorized to edit this recipe.",
   "must_be_logged_in": "You must be logged in to perform this action.",
   "ingredient_name_required": "Ingredient name is required.",
-  "quantity_required": "Quantity is required.",
-  "unit_required": "Unit is required.",
   "title_min_length": "Title must be at least 3 characters.",
   "ingredients_min_length": "At least one ingredient is required.",
   "instructions_min_length": "Instructions must be at least 10 characters.",
@@ -284,7 +282,6 @@
   "remove_ingredient_group": "Remove Ingredient Group",
   "ingredient_group_name_label": "Group Name",
   "ingredient_group_name_placeholder": "e.g., For the cake",
-  "group_name_required": "Ingredient group name is required.",
   "group_ingredients_min_length": "Each group must have at least one ingredient.",
   "ingredient_groups_min_length": "At least one ingredient group is required.",
   "default_ingredient_group_name": "Ingredients",
@@ -300,7 +297,19 @@
   "no_instructions_provided": "No instructions provided for this recipe.",
   "user_not_authenticated_or_firestore_not_initialized": "User not authenticated or Firestore not initialized.",
   "error_updating_step_status": "Error updating step completion status.",
-  "toggle_step_completion_aria": "Toggle completion for step {{stepNumber}}"
+  "toggle_step_completion_aria": "Toggle completion for step {{stepNumber}}",
+  "vote_singular": "vote",
+  "votes_plural": "votes",
+  "rate_this_recipe": "Rate this recipe",
+  "your_rating": "Your rating",
+  "average_rating_label": "Average Rating",
+  "star_rating_aria_label": "{{count}} star rating",
+  "star_label": "{{count}} star",
+  "must_be_logged_in_to_rate": "You must be logged in to rate recipes.",
+  "rating_submitted_successfully": "Rating submitted successfully!",
+  "error_submitting_rating": "Error submitting rating.",
+  "unauthorized_action_rate_private": "You can only rate public recipes or your own private recipes.",
+  "invalid_rating_value": "Invalid rating value. Please choose between 1 and 5 stars.",
+  "stars_short": "stars",
+  "be_the_first_to_rate": "Be the first to rate!"
 }
-
-    

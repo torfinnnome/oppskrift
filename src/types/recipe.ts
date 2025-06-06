@@ -39,14 +39,17 @@ export interface Recipe {
   tips?: TipStep[];
   tags: string[];
   categories: string[];
-  servingsValue: number; // Changed from servings
-  servingsUnit: ServingsUnit; // New field
-  prepTime?: string; // e.g., "30 minutes"
-  cookTime?: string; // e.g., "1 hour"
-  imageUrl?: string; // URL or base64 data URI
+  servingsValue: number;
+  servingsUnit: ServingsUnit;
+  prepTime?: string;
+  cookTime?: string;
+  imageUrl?: string;
   isPublic?: boolean;
   createdBy?: string; // User ID
   createdAt: string; // ISO date string
   updatedAt: string; // ISO date string
+  ratings?: { [userId: string]: number }; // Map of userId to star rating (1-5)
+  averageRating?: number; // Calculated average rating
+  numRatings?: number; // Total number of ratings
 }
 
