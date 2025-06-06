@@ -31,8 +31,8 @@ const ingredientSchema = z.object({
   id: z.string().optional(),
   fieldId: z.string().optional(),
   name: z.string().min(1, "ingredient_name_required"),
-  quantity: z.string().min(1, "quantity_required"),
-  unit: z.string().min(1, "unit_required"),
+  quantity: z.string(), 
+  unit: z.string(),     
 });
 
 const ingredientGroupSchema = z.object({
@@ -52,7 +52,7 @@ const instructionStepSchema = z.object({
 const tipStepSchema = z.object({
   id: z.string().optional(),
   fieldId: z.string().optional(),
-  text: z.string().min(1, "instruction_step_text_required"), // Can reuse for tips
+  text: z.string().min(1, "tip_step_text_required"), // Use specific key for tips
   isChecked: z.boolean().default(false).optional(),
 });
 
@@ -107,7 +107,7 @@ async function resizeDataUri(dataUri: string, maxWidth: number, quality: number)
 const defaultIngredientGroup = (t: (key: string) => string): IngredientGroup => ({
   id: uuidv4(),
   fieldId: uuidv4(),
-  name: "", // Let user fill this or default in placeholder
+  name: "", 
   ingredients: [{ id: uuidv4(), fieldId: uuidv4(), name: "", quantity: "", unit: "" }],
 });
 
@@ -141,7 +141,7 @@ export function RecipeForm({ initialData, isEditMode = false }: RecipeFormProps)
     defaultValues: initialData
       ? {
           ...initialData,
-          servingsValue: initialData.servingsValue || (initialData as any).servings || 1, // Handle old 'servings' field
+          servingsValue: initialData.servingsValue || (initialData as any).servings || 1, 
           servingsUnit: initialData.servingsUnit || 'servings',
           tags: initialData.tags?.join(", ") || "",
           categories: initialData.categories?.join(", ") || "",
@@ -174,7 +174,7 @@ export function RecipeForm({ initialData, isEditMode = false }: RecipeFormProps)
                 id: step.id || uuidv4(),
                 fieldId: step.fieldId || uuidv4(),
                 isChecked: step.isChecked || false,
-              })) : [defaultTipStep()]),
+              })) : []), // Default to empty array for tips if not string
           imageUrl: initialData.imageUrl || "",
           isPublic: initialData.isPublic || false,
         }
@@ -183,7 +183,7 @@ export function RecipeForm({ initialData, isEditMode = false }: RecipeFormProps)
           description: "",
           ingredientGroups: [defaultIngredientGroup(t)],
           instructions: [defaultInstructionStep()],
-          tips: [defaultTipStep()],
+          tips: [], // Default to empty array for tips
           tags: "",
           categories: "",
           servingsValue: 4,
@@ -224,11 +224,11 @@ export function RecipeForm({ initialData, isEditMode = false }: RecipeFormProps)
         form.setValue('instructions', [defaultInstructionStep()]);
       }
       const currentTips = form.getValues('tips');
-       if (!Array.isArray(currentTips)) { // Tips are optional, could be undefined
-        form.setValue('tips', []); // Initialize as empty array if undefined
+       if (!Array.isArray(currentTips)) { 
+        form.setValue('tips', []); 
       }
     } else {
-        form.setValue('tips', []); // For new recipes, start with empty tips array
+        form.setValue('tips', []); 
     }
   }, [initialData, form]);
 
@@ -238,7 +238,7 @@ export function RecipeForm({ initialData, isEditMode = false }: RecipeFormProps)
     const { source, destination, type } = result;
 
     if (type === "INGREDIENT") {
-      const sourceDroppableIdParts = source.droppableId.split('-'); // e.g. "groupIngredients-0"
+      const sourceDroppableIdParts = source.droppableId.split('-'); 
       const destDroppableIdParts = destination.droppableId.split('-');
       
       const sourceGroupIndex = parseInt(sourceDroppableIdParts[1], 10);
@@ -322,7 +322,8 @@ export function RecipeForm({ initialData, isEditMode = false }: RecipeFormProps)
       isChecked: false, 
     }));
 
-    const payloadTipSteps = (data.tips || []).map(step => ({
+    const validTips = (data.tips || []).filter(tip => tip.text && tip.text.trim() !== '');
+    const payloadTipSteps = validTips.map(step => ({
       ...step,
       id: step.id || uuidv4(),
       isChecked: false,
@@ -342,7 +343,6 @@ export function RecipeForm({ initialData, isEditMode = false }: RecipeFormProps)
       createdBy: initialData?.createdBy || user.uid,
     };
 
-    // Remove servings if it exists from old structure
     delete (recipePayloadBase as any).servings;
 
 
@@ -406,6 +406,7 @@ export function RecipeForm({ initialData, isEditMode = false }: RecipeFormProps)
                       <Loader2 className="h-8 w-8 animate-spin text-primary" />
                     </div>
                   ) : (displayImageUrl?.startsWith('data:image') || displayImageUrl?.startsWith('http')) ? (
+                    // eslint-disable-next-line @next/next/no-img-element
                     <img src={displayImageUrl} alt={form.getValues("title") || t('suggested_image')} className="rounded-md object-cover border w-full aspect-[16/9]" data-ai-hint="food cooking recipe"/>
                   ) : null}
                 </div>
@@ -591,7 +592,7 @@ export function RecipeForm({ initialData, isEditMode = false }: RecipeFormProps)
             </div>
             
             <FormField control={form.control} name="isPublic" render={({ field }) => (
-              <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm"><div className="space-y-0.5"><FormLabel>{t('make_recipe_public')}</FormLabel><FormDescription>{field.value ? <Eye className="h-4 w-4 inline mr-1" /> : <EyeOff className="h-4 w-4 inline mr-1" />}{t('recipe_public_description')}</FormDescription></div><FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl></FormItem>
+              <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm"><div className="space-y-0.5"><FormLabel>{t('make_recipe_public')}</FormLabel><FormDescription>{field.value ? <Eye className="h-4 w-4 inline mr-1" /> : <EyeOff className="h-4 w-4 inline mr-1" />}{t('recipe_public_description')}</FormDescription></div><FormControl><Switch checked={field.value || false} onCheckedChange={field.onChange} /></FormControl></FormItem>
             )} />
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -675,3 +676,5 @@ function NestedIngredientArray({ groupIndex, control }: NestedIngredientArrayPro
     </div>
   );
 }
+
+    

@@ -162,6 +162,7 @@
   "instructions_min_length": "Instruksjonene må være minst 10 tegn.",
   "instructions_min_length_array": "Minst ett instruksjonstrinn er påkrevd.",
   "instruction_step_text_required": "Tekst for instruksjonstrinn kan ikke være tom.",
+  "tip_step_text_required": "Tekst for tipstrinn kan ikke være tom.",
   "servings_min_value": "Antall for 'Gir' må være minst 1.",
   "save_changes": "Lagre endringer",
   "current_image_label": "Nåværende bilde / forslag",
@@ -301,3 +302,5 @@
   "error_updating_step_status": "Feil ved oppdatering av fullføringsstatus for trinn.",
   "toggle_step_completion_aria": "Veksle fullføring for trinn {{stepNumber}}"
 }
+
+    

@@ -162,6 +162,7 @@
   "instructions_min_length": "Las instrucciones deben tener al menos 10 caracteres.",
   "instructions_min_length_array": "Se requiere al menos un paso de instrucción.",
   "instruction_step_text_required": "El texto del paso de instrucción no puede estar vacío.",
+  "tip_step_text_required": "El texto del paso de consejo no puede estar vacío.",
   "servings_min_value": "La cantidad de rendimiento debe ser al menos 1.",
   "save_changes": "Guardar Cambios",
   "current_image_label": "Imagen Actual / Sugerencia",
@@ -301,3 +302,5 @@
   "error_updating_step_status": "Error al actualizar el estado de finalización del paso.",
   "toggle_step_completion_aria": "Alternar finalización para el paso {{stepNumber}}"
 }
+
+    

@@ -162,6 +162,7 @@
   "instructions_min_length": "Instructions must be at least 10 characters.",
   "instructions_min_length_array": "At least one instruction step is required.",
   "instruction_step_text_required": "Instruction step text cannot be empty.",
+  "tip_step_text_required": "Tip step text cannot be empty.",
   "servings_min_value": "Yield quantity must be at least 1.",
   "save_changes": "Save Changes",
   "current_image_label": "Current Image / Suggestion",
@@ -301,3 +302,5 @@
   "error_updating_step_status": "Error updating step completion status.",
   "toggle_step_completion_aria": "Toggle completion for step {{stepNumber}}"
 }
+
+    
