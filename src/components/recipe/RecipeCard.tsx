@@ -3,10 +3,10 @@
 
 import type { Recipe } from "@/types";
 import Link from "next/link";
-import NextImage from "next/image"; 
+import NextImage from "next/image";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Clock, Users, Tag, Bookmark, Globe } from "lucide-react"; 
+import { Clock, Tag, Bookmark, Globe, Utensils } from "lucide-react"; // Changed Users to Utensils
 import { useTranslation } from "@/lib/i18n";
 
 interface RecipeCardProps {
@@ -18,6 +18,9 @@ export function RecipeCard({ recipe }: RecipeCardProps) {
   const defaultImage = "https://placehold.co/600x400.png";
   const imageUrl = recipe.imageUrl || defaultImage;
   const isDataUrl = imageUrl.startsWith('data:image');
+
+  const displayServingsUnitShort = recipe.servingsUnit === 'pieces' ? t('pieces_short') : t('servings_short');
+
 
   return (
     <Card className="flex flex-col h-full overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300 rounded-lg group">
@@ -36,9 +39,9 @@ export function RecipeCard({ recipe }: RecipeCardProps) {
               <NextImage
                 src={imageUrl}
                 alt={recipe.title}
-                layout="fill"
-                objectFit="cover"
-                className="" 
+                fill
+                sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                className="object-cover"
                 data-ai-hint="food cooking"
               />
             )}
@@ -62,7 +65,7 @@ export function RecipeCard({ recipe }: RecipeCardProps) {
           </CardDescription>
         )}
         <div className="flex items-center gap-2 mb-2 flex-wrap">
-          {recipe.categories?.slice(0, 1).map((category) => ( 
+          {recipe.categories?.slice(0, 1).map((category) => (
             <Link key={category} href={`/?category=${encodeURIComponent(category)}`} passHref legacyBehavior>
               <a className="no-underline flex items-center">
                 <Bookmark className="h-3 w-3 mr-1 text-primary/80" />
@@ -72,7 +75,7 @@ export function RecipeCard({ recipe }: RecipeCardProps) {
               </a>
             </Link>
           ))}
-          {recipe.tags?.slice(0, 2).map((tag) => ( 
+          {recipe.tags?.slice(0, 2).map((tag) => (
              <Link key={tag} href={`/?tag=${encodeURIComponent(tag)}`} passHref legacyBehavior>
               <a className="no-underline flex items-center">
                 <Tag className="h-3 w-3 mr-1 text-accent/80" />
@@ -87,8 +90,8 @@ export function RecipeCard({ recipe }: RecipeCardProps) {
       <CardFooter className="p-4 border-t">
         <div className="flex justify-between items-center w-full text-xs text-muted-foreground">
           <div className="flex items-center gap-1">
-            <Users className="h-3 w-3" />
-            <span>{recipe.servings} {t('servings')}</span>
+            <Utensils className="h-3 w-3" /> {/* Changed from Users */}
+            <span>{recipe.servingsValue} {displayServingsUnitShort}</span>
           </div>
           {(recipe.prepTime || recipe.cookTime) && (
              <div className="flex items-center gap-1">

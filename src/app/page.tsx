@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, Suspense, useEffect, useMemo } from "react"; // Added useMemo
+import { useState, Suspense, useEffect, useMemo } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useRecipes } from "@/contexts/RecipeContext";
 import { RecipeCard } from "@/components/recipe/RecipeCard";
@@ -36,21 +36,40 @@ function HomePageContent() {
   const tagFilter = searchParams.get("tag");
 
   const [searchTerm, setSearchTerm] = useState("");
+  // Initialize to "all-viewable", useEffect will adjust it based on auth status and URL params.
   const [visibilityFilter, setVisibilityFilter] = useState<VisibilityFilter>("all-viewable");
+
+  useEffect(() => {
+    if (!authLoading) {
+      if (user) {
+        // If logged in and no category/tag filters from URL, default to "my-all"
+        if (!categoryFilter && !tagFilter) {
+          setVisibilityFilter("my-all");
+        } else {
+          // If logged in AND category/tag filters ARE present, default to "all-viewable"
+          setVisibilityFilter("all-viewable");
+        }
+      } else {
+        // If logged out, default to "all-viewable" (which context limits to public)
+        setVisibilityFilter("all-viewable");
+      }
+    }
+  }, [user, authLoading, categoryFilter, tagFilter]);
 
   const isLoading = recipesLoading || authLoading;
 
   const handleClearFilters = () => {
     router.push("/");
-    setVisibilityFilter("all-viewable");
+    // When clearing filters, if logged in, reset to "my-all", otherwise "all-viewable"
+    setVisibilityFilter(user ? "my-all" : "all-viewable");
     setSearchTerm("");
   };
   
   const filteredRecipes = useMemo(() => {
-    let currentRecipes = recipes;
+    let currentRecipes = [...recipes]; // Start with all recipes from context
 
-    // 1. Apply visibility filter (if user is logged in)
-    if (user && visibilityFilter !== "all-viewable") {
+    // 1. Apply visibility filter based on the state (user's explicit choice or initial default)
+    if (user) { // This block only applies if a user is logged in
       if (visibilityFilter === "my-all") {
         currentRecipes = currentRecipes.filter(recipe => recipe.createdBy === user.uid);
       } else if (visibilityFilter === "my-public") {
@@ -60,10 +79,10 @@ function HomePageContent() {
       } else if (visibilityFilter === "community-public") {
         currentRecipes = currentRecipes.filter(recipe => recipe.createdBy !== user.uid && recipe.isPublic);
       }
-    } else if (!user) { // For logged-out users, ensure only public are shown by default from context
+      // If visibilityFilter is "all-viewable", recipes from context (user's + community public) are used.
+    } else { // Logged-out users only see public recipes (already filtered by context, but good to be explicit)
         currentRecipes = currentRecipes.filter(recipe => recipe.isPublic);
     }
-
 
     // 2. Apply category or tag filter (from URL params)
     if (categoryFilter) {
@@ -128,7 +147,13 @@ function HomePageContent() {
   
   const activeFilterValue = categoryFilter || tagFilter;
   const activeFilterType = categoryFilter ? 'category' : (tagFilter ? 'tag' : null);
-  const isAnyFilterActive = activeFilterValue || (user && visibilityFilter !== "all-viewable") || searchTerm;
+  // Determine if "My Recipes (All)" should be considered an "active filter" for UI badge purposes
+  // It's an active filter if the user is logged in AND visibilityFilter is "my-all" AND it's different from the scenario where no URL params are present
+  // (because in that case, "my-all" is the default)
+  const myAllIsActiveBadge = user && visibilityFilter === "my-all" && (!!categoryFilter || !!tagFilter);
+  const otherVisibilityFilterActive = user && visibilityFilter !== "all-viewable" && visibilityFilter !== "my-all";
+  const isAnyFilterActive = activeFilterValue || searchTerm || myAllIsActiveBadge || otherVisibilityFilterActive;
+
 
   return (
     <div className="space-y-8">
@@ -178,27 +203,27 @@ function HomePageContent() {
           {categoryFilter && (
             <Badge variant="secondary" className="flex items-center gap-1">
               <Bookmark className="h-3 w-3" /> {t('category')}: {categoryFilter}
-              <Button variant="ghost" size="xs" onClick={() => router.push(tagFilter ? `/?tag=${tagFilter}` : (visibilityFilter !== "all-viewable" ? `/?visibility=${visibilityFilter}` : "/"))} className="ml-1 h-5 w-5 p-0.5"><XCircle className="h-3 w-3"/></Button>
+              <Button variant="ghost" size="xs" onClick={() => router.push(tagFilter ? `/?tag=${tagFilter}` : "/")} className="ml-1 h-5 w-5 p-0.5"><XCircle className="h-3 w-3"/></Button>
             </Badge>
           )}
           {tagFilter && (
             <Badge variant="outline" className="flex items-center gap-1">
               <Tag className="h-3 w-3" /> {t('tag')}: {tagFilter}
-              <Button variant="ghost" size="xs" onClick={() => router.push(categoryFilter ? `/?category=${categoryFilter}` : (visibilityFilter !== "all-viewable" ? `/?visibility=${visibilityFilter}` : "/"))} className="ml-1 h-5 w-5 p-0.5"><XCircle className="h-3 w-3"/></Button>
+              <Button variant="ghost" size="xs" onClick={() => router.push(categoryFilter ? `/?category=${categoryFilter}` : "/")} className="ml-1 h-5 w-5 p-0.5"><XCircle className="h-3 w-3"/></Button>
             </Badge>
           )}
-          {user && visibilityFilter !== "all-viewable" && (
+          {/* Show visibility filter badge if it's not the implicit default 'my-all' or 'all-viewable' (when no other filters) */}
+          {user && (visibilityFilter !== "all-viewable" || (categoryFilter || tagFilter)) && (visibilityFilter !== "my-all" || (categoryFilter || tagFilter)) && (
             <Badge variant="default" className="flex items-center gap-1">
               <ListFilter className="h-3 w-3" /> {t(visibilityFilterOptions.find(opt => opt.value === visibilityFilter)?.labelKey || 'Filter')}
-               <Button variant="ghost" size="xs" onClick={() => setVisibilityFilter("all-viewable")} className="ml-1 h-5 w-5 p-0.5 hover:bg-primary-foreground/20"><XCircle className="h-3 w-3"/></Button>
+               <Button variant="ghost" size="xs" onClick={() => setVisibilityFilter(user && !categoryFilter && !tagFilter ? "my-all" : "all-viewable")} className="ml-1 h-5 w-5 p-0.5 hover:bg-primary-foreground/20"><XCircle className="h-3 w-3"/></Button>
             </Badge>
           )}
-          {(categoryFilter || tagFilter || (user && visibilityFilter !== "all-viewable")) && (
-             <Button variant="ghost" size="sm" onClick={handleClearFilters} className="text-primary hover:text-primary/80 ml-auto">
-                <XCircle className="mr-1 h-4 w-4" />
-                {t('clear_all_filters')}
-            </Button>
-          )}
+          
+          <Button variant="ghost" size="sm" onClick={handleClearFilters} className="text-primary hover:text-primary/80 ml-auto">
+              <XCircle className="mr-1 h-4 w-4" />
+              {t('clear_all_filters')}
+          </Button>
         </div>
       )}
 
@@ -226,7 +251,7 @@ function HomePageContent() {
           <p className="text-xl text-muted-foreground">
             {activeFilterType === 'category' && categoryFilter ? t('no_recipes_found_for_category', { category: categoryFilter }) : 
              activeFilterType === 'tag' && tagFilter ? t('no_recipes_found_for_tag', { tag: tagFilter }) :
-             (user && visibilityFilter !== "all-viewable") ? t('no_recipes_found_for_visibility', { filter: t(visibilityFilterOptions.find(opt => opt.value === visibilityFilter)?.labelKey || 'current filter')}) :
+             (user && visibilityFilter !== "all-viewable" && visibilityFilter !== "my-all") ? t('no_recipes_found_for_visibility', { filter: t(visibilityFilterOptions.find(opt => opt.value === visibilityFilter)?.labelKey || 'current filter')}) :
              searchTerm ? t('no_recipes_found_for_search', { term: searchTerm }) :
              t('no_recipes_found')}
           </p>
@@ -248,5 +273,4 @@ export default function HomePage() {
     </Suspense>
   );
 }
-
     

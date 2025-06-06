@@ -123,7 +123,18 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setLoading(true);
     try {
       if ((updates.email || updates.newPassword) && currentPassword) {
-        const credential = EmailAuthProvider.credential(currentUser.email!, currentPassword);
+        if (!currentUser.email) {
+          // This is an unexpected state for an email/password user who is logged in
+          // and trying to perform a sensitive operation.
+          console.error("User email is null, cannot re-authenticate for email/password update.");
+          setLoading(false);
+          return { 
+            success: false, 
+            error: t('error_updating_profile_unexpected_email_null'), 
+            errorCode: "auth/internal-error-email-null" 
+          };
+        }
+        const credential = EmailAuthProvider.credential(currentUser.email, currentPassword);
         await reauthenticateWithCredential(currentUser, credential);
       } else if ((updates.email || updates.newPassword) && !currentPassword) {
         setLoading(false);
@@ -134,6 +145,16 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         await firebaseUpdateProfile(currentUser, { displayName: updates.displayName });
       }
       if (updates.email && updates.email !== currentUser.email) {
+        // Re-check email validity before attempting update if it wasn't checked for re-auth
+        if (!currentUser.email && !currentPassword) { 
+             console.error("User email is null, cannot update email without re-authentication.");
+             setLoading(false);
+             return { 
+                success: false, 
+                error: t('error_updating_profile_unexpected_email_null'), 
+                errorCode: "auth/internal-error-email-null-update" 
+             };
+        }
         await firebaseUpdateEmail(currentUser, updates.email);
       }
       if (updates.newPassword) {
@@ -186,3 +207,4 @@ export const useAuth = (): AuthContextType => {
   }
   return context;
 };
+

@@ -1,4 +1,5 @@
-import { useContext } from 'react';
+
+import { useContext, useCallback } from 'react'; // Added useCallback
 import { LanguageContext, type LanguageCode } from '@/contexts/LanguageContext';
 import en from '@/locales/en.json';
 import es from '@/locales/es.json';
@@ -15,9 +16,9 @@ export function useTranslation() {
   if (!context) {
     throw new Error("useTranslation must be used within a LanguageProvider");
   }
-  const { language } = context;
+  const { language, setLanguage } = context; // Destructure setLanguage for the return
 
-  const t = (key: string, replacements?: Record<string, string | number>): string => {
+  const t = useCallback((key: string, replacements?: Record<string, string | number>): string => {
     let translation = translations[language]?.[key] || key;
     if (replacements) {
       Object.entries(replacements).forEach(([k, v]) => {
@@ -25,7 +26,7 @@ export function useTranslation() {
       });
     }
     return translation;
-  };
+  }, [language]); // t is now memoized and only changes if 'language' changes
 
-  return { t, currentLanguage: language, changeLanguage: context.setLanguage };
+  return { t, currentLanguage: language, changeLanguage: setLanguage }; // Return setLanguage as changeLanguage
 }
