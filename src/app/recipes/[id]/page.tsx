@@ -34,6 +34,31 @@ interface ScaledIngredientGroup extends Omit<IngredientGroupType, 'ingredients'>
   ingredients: { name: string; quantity: string; unit: string; id: string; }[];
 }
 
+// Helper function to find URLs and wrap them in <a> tags
+const linkifyText = (text: string): React.ReactNode[] => {
+  if (!text) return [];
+  const urlRegex = /(https?:\/\/[^\s]+)/g;
+  const parts = text.split(urlRegex); // This splits and includes the delimiters (URLs) in the array
+
+  return parts.map((part, index) => {
+    if (part.match(urlRegex)) {
+      return (
+        <a
+          key={`link-${index}-${part}`}
+          href={part}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-primary hover:underline break-all"
+        >
+          {part}
+        </a>
+      );
+    }
+    return part; // This will be a string
+  });
+};
+
+
 export default function RecipeDetailPage() {
   const params = useParams();
   const router = useRouter();
@@ -54,22 +79,13 @@ export default function RecipeDetailPage() {
   const [instructionStepStates, setInstructionStepStates] = useState<Record<string, boolean>>({});
   const [tipStepStates, setTipStepStates] = useState<Record<string, boolean>>({});
 
-  // Helper function for scaling ingredient quantity, specific to this component's needs
-  const scaleIngredientQuantityForDisplay = (quantityStr: string, originalServingsValue: number, newServingsValue: number): string => {
-    if (typeof quantityStr !== 'string') return '';
-    const quantityNum = parseFloat(quantityStr.replace(',', '.'));
-    if (isNaN(quantityNum) || originalServingsValue <= 0 || newServingsValue <= 0) return quantityStr;
-    const scaledQuantity = (quantityNum / originalServingsValue) * newServingsValue;
-    let formattedQuantity = Number.isInteger(scaledQuantity) ? scaledQuantity.toString() : Number(scaledQuantity.toFixed(2)).toString().replace(/\.?0+$/, '');
-    return formattedQuantity.replace('.', ',');
-  };
-
   useEffect(() => {
     if (recipeId && !recipesLoading) {
       const foundRecipe = getRecipeById(recipeId);
       setRecipe(foundRecipe);
       if (foundRecipe) {
         setNumServings(foundRecipe.servingsValue > 0 ? foundRecipe.servingsValue : 1);
+        
         const initialInstructionStates: Record<string, boolean> = {};
         (foundRecipe.instructions || []).forEach(step => {
           initialInstructionStates[step.id] = false; // Always start unchecked
@@ -81,6 +97,7 @@ export default function RecipeDetailPage() {
           initialTipStates[tip.id] = false; // Always start unchecked
         });
         setTipStepStates(initialTipStates);
+
       } else {
         setInstructionStepStates({});
         setTipStepStates({});
@@ -108,6 +125,16 @@ export default function RecipeDetailPage() {
 
   const scaledIngredientGroups: ScaledIngredientGroup[] = useMemo(() => {
     if (!recipe || !recipe.ingredientGroups) return [];
+    // Use the context's scaling function for display consistency, if available, or local one
+    // For this detail page, direct use of the local/imported scaleIngredientQuantityForDisplay is fine.
+    const scaleIngredientQuantityForDisplay = (quantityStr: string, originalServingsValue: number, newServingsValue: number): string => {
+        if (typeof quantityStr !== 'string') return '';
+        const quantityNum = parseFloat(quantityStr.replace(',', '.'));
+        if (isNaN(quantityNum) || originalServingsValue <= 0 || newServingsValue <= 0) return quantityStr;
+        const scaledQuantity = (quantityNum / originalServingsValue) * newServingsValue;
+        let formattedQuantity = Number.isInteger(scaledQuantity) ? scaledQuantity.toString() : Number(scaledQuantity.toFixed(2)).toString().replace(/\.?0+$/, '');
+        return formattedQuantity.replace('.', ',');
+    };
     return recipe.ingredientGroups.map(group => ({
       ...group,
       ingredients: group.ingredients.map(ing => ({
@@ -259,7 +286,7 @@ export default function RecipeDetailPage() {
                           (instructionStepStates[step.id] || false) && "line-through text-muted-foreground"
                         )}
                       >
-                        {step.text}
+                        {linkifyText(step.text)}
                       </label>
                     </li>
                   ))}
@@ -295,7 +322,7 @@ export default function RecipeDetailPage() {
                           (tipStepStates[tip.id] || false) && "line-through text-muted-foreground"
                         )}
                       >
-                        {tip.text}
+                        {linkifyText(tip.text)}
                       </label>
                     </li>
                   ))}
@@ -314,6 +341,3 @@ export default function RecipeDetailPage() {
     </div>
   );
 }
-
-
-    

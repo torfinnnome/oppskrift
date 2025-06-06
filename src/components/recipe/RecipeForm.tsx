@@ -31,14 +31,14 @@ const ingredientSchema = z.object({
   id: z.string().optional(),
   fieldId: z.string().optional(),
   name: z.string().min(1, "ingredient_name_required"),
-  quantity: z.string(), 
-  unit: z.string(),     
+  quantity: z.string().optional(), 
+  unit: z.string().optional(),     
 });
 
 const ingredientGroupSchema = z.object({
   id: z.string().optional(),
   fieldId: z.string().optional(),
-  name: z.string().min(1, "group_name_required"),
+  name: z.string().optional(), // Made group name optional
   ingredients: z.array(ingredientSchema).min(1, "group_ingredients_min_length"),
 });
 
@@ -52,7 +52,7 @@ const instructionStepSchema = z.object({
 const tipStepSchema = z.object({
   id: z.string().optional(),
   fieldId: z.string().optional(),
-  text: z.string().min(1, "tip_step_text_required"), // Use specific key for tips
+  text: z.string().min(1, "tip_step_text_required"),
   isChecked: z.boolean().default(false).optional(),
 });
 
@@ -150,12 +150,13 @@ export function RecipeForm({ initialData, isEditMode = false }: RecipeFormProps)
                 ...group,
                 id: group.id || uuidv4(),
                 fieldId: group.fieldId || uuidv4(),
+                name: group.name || "", // Default to empty string if not present
                 ingredients: Array.isArray(group.ingredients) ? group.ingredients.map(ing => ({
                   ...ing,
                   id: ing.id || uuidv4(),
                   fieldId: ing.fieldId || uuidv4(),
-                  quantity: String(ing.quantity),
-                  unit: String(ing.unit),
+                  quantity: String(ing.quantity || ""), // Default to empty string
+                  unit: String(ing.unit || ""), // Default to empty string
                 })) : [{ id: uuidv4(), fieldId: uuidv4(), name: "", quantity: "", unit: "" }],
               }))
             : [defaultIngredientGroup(t)],
@@ -174,7 +175,7 @@ export function RecipeForm({ initialData, isEditMode = false }: RecipeFormProps)
                 id: step.id || uuidv4(),
                 fieldId: step.fieldId || uuidv4(),
                 isChecked: step.isChecked || false,
-              })) : []), // Default to empty array for tips if not string
+              })) : []),
           imageUrl: initialData.imageUrl || "",
           isPublic: initialData.isPublic || false,
         }
@@ -183,7 +184,7 @@ export function RecipeForm({ initialData, isEditMode = false }: RecipeFormProps)
           description: "",
           ingredientGroups: [defaultIngredientGroup(t)],
           instructions: [defaultInstructionStep()],
-          tips: [], // Default to empty array for tips
+          tips: [], 
           tags: "",
           categories: "",
           servingsValue: 4,
@@ -310,9 +311,12 @@ export function RecipeForm({ initialData, isEditMode = false }: RecipeFormProps)
     const payloadIngredientGroups = data.ingredientGroups.map(group => ({
       ...group,
       id: group.id || uuidv4(),
+      name: group.name || "", // Ensure name is at least an empty string
       ingredients: group.ingredients.map(ing => ({
         ...ing,
         id: ing.id || uuidv4(),
+        quantity: ing.quantity || "", // Ensure quantity is at least an empty string
+        unit: ing.unit || "", // Ensure unit is at least an empty string
       })),
     }));
     
@@ -448,7 +452,7 @@ export function RecipeForm({ initialData, isEditMode = false }: RecipeFormProps)
                               </Button>
                             )}
                           </div>
-                          <FormControl><Input placeholder={t('ingredient_group_name_placeholder')} {...field} /></FormControl>
+                          <FormControl><Input placeholder={t('ingredient_group_name_placeholder')} {...field} value={field.value || ""} /></FormControl>
                           <FormMessage>{translateError(form.formState.errors.ingredientGroups?.[groupIndex]?.name?.message)}</FormMessage>
                         </FormItem>
                       )} />
@@ -676,5 +680,7 @@ function NestedIngredientArray({ groupIndex, control }: NestedIngredientArrayPro
     </div>
   );
 }
+
+    
 
     
