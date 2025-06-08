@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Badge } from "@/components/ui/badge";
 import { Clock, Tag, Bookmark, Globe, Utensils, Star } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
+import { cn } from "@/lib/utils";
 
 interface RecipeCardProps {
   recipe: Recipe;
@@ -15,25 +16,59 @@ interface RecipeCardProps {
 
 export function RecipeCard({ recipe }: RecipeCardProps) {
   const { t } = useTranslation();
-  const defaultImage = "https://placehold.co/600x400.png";
+  // Use a 1x1 placeholder; the text "1x1" will be tiny.
+  // The parent div will get a background color for a cleaner look.
+  const defaultImage = "https://placehold.co/1x1.png"; 
   const imageUrl = recipe.imageUrl || defaultImage;
   const isDataUrl = imageUrl.startsWith('data:image');
+  const isPlaceholder = imageUrl === defaultImage;
 
   const displayServingsUnitShort = recipe.servingsUnit === 'pieces' ? t('pieces_short') : t('servings_short');
+
+  const getRecipeHintForPlaceholder = (recipe: Recipe): string => {
+    const hints: string[] = [];
+    if (recipe.categories && recipe.categories.length > 0) {
+        hints.push(recipe.categories[0].split(" ")[0].toLowerCase());
+    }
+    if (recipe.tags && recipe.tags.length > 0) {
+        if (hints.length < 2) {
+            hints.push(recipe.tags[0].split(" ")[0].toLowerCase());
+        }
+    }
+
+    if (hints.length === 0 && recipe.title) {
+        const titleWords = recipe.title.toLowerCase().split(" ");
+        if (titleWords.length > 0) hints.push(titleWords[0]);
+        if (titleWords.length > 1 && hints.length < 2) hints.push(titleWords[1]);
+    }
+    
+    if (hints.length === 0) {
+        return "food recipe"; // Default fallback
+    }
+    
+    const uniqueHints = [...new Set(hints)];
+    return uniqueHints.slice(0, 2).join(" ").trim();
+  };
+
+  // Use dynamic hint only if it's a placeholder, otherwise a generic one for actual images.
+  const aiHint = isPlaceholder ? getRecipeHintForPlaceholder(recipe) : "food cooking";
 
 
   return (
     <Card className="flex flex-col h-full overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300 rounded-lg group">
       <Link href={`/recipes/${recipe.id}`} className="block">
         <CardHeader className="p-0">
-          <div className="relative w-full h-48 group-hover:scale-105 transition-transform duration-300">
+          <div className={cn(
+            "relative w-full h-48 group-hover:scale-105 transition-transform duration-300",
+            isPlaceholder && "bg-muted/50" // Add background for placeholder
+          )}>
             {isDataUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={imageUrl}
                 alt={recipe.title}
                 className="w-full h-full object-cover"
-                data-ai-hint="food cooking"
+                data-ai-hint={aiHint}
               />
             ) : (
               <NextImage
@@ -42,7 +77,7 @@ export function RecipeCard({ recipe }: RecipeCardProps) {
                 fill
                 sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                 className="object-cover"
-                data-ai-hint="food cooking"
+                data-ai-hint={aiHint}
               />
             )}
             {recipe.isPublic && (
