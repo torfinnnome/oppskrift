@@ -20,7 +20,7 @@ const OcrAndParseRecipeInputSchema = z.object({
     .describe(
       "An image of a recipe, as a data URI that must include a MIME type and use Base64 encoding. Expected format: 'data:<mimetype>;base64,<encoded_data>'."
     ),
-  userLanguageCode: z.string().optional().describe("The user's current UI language code (e.g., 'en', 'no', 'es'). Used to guide the AI in outputting language-specific terms like 'Ingredients' vs 'Ingredienser' if not explicitly found in the OCR text."),
+  userLanguageCode: z.string().optional().describe("The user's current UI language code (e.g., 'en', 'no', 'es'). Used to guide the AI in outputting language-specific terms like 'Ingredients' vs 'Ingredienser' if not explicitly found in the OCR text, and for the language of the instructions."),
 });
 export type OcrAndParseRecipeInput = z.infer<typeof OcrAndParseRecipeInputSchema>;
 
@@ -33,7 +33,7 @@ const ParsedRecipeOutputSchema = z.object({
       name: z.string().optional().describe("The name of this ingredient group (e.g., 'For the dough', 'For the filling'). If the source text does not explicitly name groups, and userLanguageCode is 'no', default to 'Ingredienser'. If 'es', 'Ingredientes'. Otherwise, 'Ingredients' or leave empty."),
       ingredients: z.array(
         z.object({
-          name: z.string().describe("The name of the ingredient (e.g., 'flour', 'sugar', 'eggs'). Extract only the primary name; do NOT include translations in parentheses."),
+          name: z.string().describe("The name of the ingredient (e.g., 'flour', 'sugar', 'eggs'). Extract only the primary name; do NOT include translations in parentheses OR the quantity/unit text."),
           quantity: z.string().optional().describe("The quantity of the ingredient (e.g., '250', '1 1/4', 'a pinch'). Include numeric values and fractions if present."),
           unit: z.string().optional().describe("The unit for the quantity (e.g., 'g', 'ts', 'ml', 'stk').")
         })
@@ -42,9 +42,9 @@ const ParsedRecipeOutputSchema = z.object({
   ).describe("An array of ingredient groups. If the recipe is simple and has no explicit groups, put all ingredients into one group."),
   instructions: z.array(
     z.object({
-      text: z.string().describe("A single, distinct step in the recipe preparation instructions. Preserve original numbering if present, but return only the text of the step.")
+      text: z.string().describe("A single, distinct step in the recipe preparation instructions. The text should be in the language specified by 'userLanguageCode'. Any leading numbers or list markers (e.g., '1.', '-') from the OCR text should be removed. ")
     })
-  ).describe("An array of instruction steps. Each step should be an object with a 'text' field."),
+  ).describe("An array of instruction steps. Each step should be an object with a 'text' field. All instruction text should be in the language specified by 'userLanguageCode'."),
   tips: z.array(
     z.object({
       text: z.string().describe("A single tip, suggestion, or variation for the recipe, if any are provided in the source.")
@@ -96,7 +96,7 @@ const ocrAndParseRecipeFlow = ai.defineFlow(
         input: { schema: z.object({ inputText: z.string(), userLanguageCode: z.string().optional() }) },
         output: { schema: ParsedRecipeOutputSchema },
         prompt: `You are an expert recipe parsing assistant. Your task is to analyze the provided text, which was extracted via OCR from an image, and structure it into a JSON object matching the provided schema.
-The user's preferred language for UI elements is '{{{userLanguageCode}}}'. If an ingredient group name is not explicitly found in the text, use a default name appropriate for this language (e.g., 'Ingredienser' for 'no', 'Ingredients' for 'en', 'Ingredientes' for 'es').
+The user's preferred language for UI elements and recipe instructions is '{{{userLanguageCode}}}'. If an ingredient group name is not explicitly found in the text, use a default name appropriate for this language (e.g., 'Ingredienser' for 'no', 'Ingredients' for 'en', 'Ingredientes' for 'es').
 
 Extracted OCR text:
 \`\`\`
@@ -109,9 +109,18 @@ Carefully extract the following information:
 - **ingredientGroups**:
     - If the recipe has named sections for ingredients, create a group for each.
     - If not, put all ingredients into a single group. Use a default group name appropriate for '{{{userLanguageCode}}}' if no specific group name is apparent (e.g., 'Ingredienser' if '{{{userLanguageCode}}}' is 'no').
-    - For each ingredient, try to separate its name, quantity, and unit. CRITICAL: The ingredient name should be extracted as it appears in the OCR text. Do NOT add English translations or any other language in parentheses. For example, if the OCR text says 'mel', the ingredient name should be 'mel', not 'mel (flour)'. If the OCR text itself contains parentheses, like 'epler (gjerne gule)', include the parenthetical part as it is part of the name.
+    - For each ingredient:
+        - **name**: Extract *only* the actual name of the ingredient (e.g., 'margarin', 'sukker', 'hvetemel'). CRITICAL: The 'name' field must NOT include the quantity or unit, as those are parsed into separate 'quantity' and 'unit' fields. For example, if the OCR text for an ingredient line is '150 gr margarin', the 'name' should be 'margarin', 'quantity' should be '150', and 'unit' should be 'gr'.
+        - Do NOT add English translations or any other language in parentheses to the 'name' field unless they were part of the original OCR text (e.g., 'epler (gjerne gule)' is okay if '(gjerne gule)' was in the OCR).
+        - **quantity**: The quantity of the ingredient (e.g., '250', '1 1/4', 'a pinch').
+        - **unit**: The unit for the quantity (e.g., 'g', 'ts', 'ml', 'stk').
 - **instructions**: A list of preparation steps.
-- **tips**: Any additional tips, variations, or serving suggestions.
+    - For each instruction step:
+        - **text**: Extract the primary instruction text. CRITICAL: The output text for each instruction MUST be in the language specified by '{{{userLanguageCode}}}'. If the OCR text for a step is in a different language, attempt to provide the instruction in '{{{userLanguageCode}}}'.
+        - Remove any leading numbers, list markers (like '1.', '-', '*') or automatically generated prefixes from the OCR text. The output should be only the instruction itself.
+        - If the OCR text for a step includes a clear parenthetical translation (e.g., an English translation of a Norwegian step like 'Rør smør (Mix butter)' or 'Tilsett eggene (Add eggs)'), EXCLUDE the parenthetical translation from the output. Retain only the primary language instruction (translated to '{{{userLanguageCode}}}' if necessary). If parentheses contain notes or clarifications in the same language as the main instruction (e.g., 'Stek i 20 min (eller til gyllenbrun)'), they should be kept and translated to '{{{userLanguageCode}}}' along with the main instruction.
+    - If a line from OCR text appears to be a note rather than a direct cooking instruction (e.g., "For a large baking pan (with lid) = double portion."), try to place it in the 'tips' section if appropriate, or omit it if it doesn't fit as a tip and cannot be translated into an instruction in '{{{userLanguageCode}}}'.
+- **tips**: Any additional tips, variations, or serving suggestions. Text should ideally be in '{{{userLanguageCode}}}'.
 - **servingsValue**: The number of servings or pieces.
 - **servingsUnit**: "servings" or "pieces".
 - **prepTime**: Preparation time.
@@ -122,7 +131,7 @@ Carefully extract the following information:
 
 Prioritize accuracy. If some information is not available, omit optional fields.
 Ensure the output strictly adheres to the JSON schema.
-The language of the output fields should match the language of the input recipe if discernible, otherwise use '{{{userLanguageCode}}}' as a guide for defaults.
+The language of the output fields should generally match '{{{userLanguageCode}}}' unless the information is inherently language-neutral (like quantities) or the source text is more specific.
 
 Output JSON:
 `,
