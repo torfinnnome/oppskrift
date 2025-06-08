@@ -16,7 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Clock, Users, Tag, Bookmark, Edit, Trash2, ShoppingCart, Minus, Plus, ArrowLeft, Globe, EyeOff, FileText, FileCode, Loader2, Download, Smartphone, Info, Lightbulb, Utensils, Star as StarIcon } from "lucide-react";
+import { Clock, Users, Tag, Bookmark, Edit, Trash2, ShoppingCart, Minus, Plus, ArrowLeft, Globe, EyeOff, FileText, FileCode, Loader2, Download, Smartphone, Info, Lightbulb, Utensils, Star as StarIcon, Link as LinkIcon } from "lucide-react";
 import Link from "next/link";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
@@ -249,6 +249,15 @@ export default function RecipeDetailPage() {
             </div>
           </div>
           {recipe.description && <CardDescription className="text-lg text-muted-foreground pt-2">{recipe.description}</CardDescription>}
+          {recipe.sourceUrl && (
+            <p className="text-sm text-muted-foreground pt-2">
+              <LinkIcon className="inline-block h-4 w-4 mr-1 align-middle" />
+              {t('source_url_label')}:{' '}
+              <Link href={recipe.sourceUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline break-all">
+                {recipe.sourceUrl}
+              </Link>
+            </p>
+          )}
         </CardHeader>
         <CardContent className="py-6 space-y-8">
           <div className="grid md:grid-cols-3 gap-6 text-sm items-center">

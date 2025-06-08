@@ -44,6 +44,7 @@ export interface Recipe {
   prepTime?: string;
   cookTime?: string;
   imageUrl?: string;
+  sourceUrl?: string; // Added source URL
   isPublic?: boolean;
   createdBy?: string; // User ID
   createdAt: string; // ISO date string

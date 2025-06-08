@@ -12,8 +12,10 @@ Oppskrift is a modern, web-based application designed to help you manage your pe
 
 *   **Recipe Management:** Add, view, edit, and delete your personal recipes. Recipes can be marked as public (visible to all users, even unauthenticated) or private (visible only to the creator).
 *   **Rich Recipe Details:** Store ingredients, multi-step instructions, serving sizes, prep/cook times, categories, and tags.
-*   **Star Rating System:** Users can rate public recipes (and owners their own private recipes) on a 1-5 star scale. Average ratings and vote counts are displayed.
+*   **AI-Powered Recipe Import (Text/URL):** Paste raw recipe text or a URL into the recipe form, and an AI agent (powered by Genkit) will attempt to parse the content and automatically populate the form fields. The AI uses the currently selected UI language as a guide for parsing.
+*   **AI-Powered Recipe Import (Image OCR):** Upload an image of a recipe (or drag-and-drop), and the AI will perform Optical Character Recognition (OCR) to extract text, then parse that text to populate the recipe form. This feature also uses the selected UI language to guide the AI.
 *   **AI-Powered Image Suggestions:** Get relevant image suggestions for your recipes based on their titles, powered by Genkit and Gemini. Images are stored as data URIs after client-side resizing. (Note: Image generation availability may be subject to regional restrictions by the model provider, as is currently the case for Norway/EU with `gemini-2.0-flash-exp`).
+*   **Star Rating System:** Users can rate public recipes (and owners their own private recipes) on a 1-5 star scale. Average ratings and vote counts are displayed. Users can also clear their vote.
 *   **Dynamic Ingredient Scaling:** Adjust serving sizes on the fly, and ingredient quantities will scale automatically.
 *   **Shopping List:** Add ingredients from recipes to a consolidated shopping list.
 *   **Filtering & Searching:** Easily find recipes by searching titles, descriptions, ingredients, categories, or tags. Filter by visibility (public, private, community).

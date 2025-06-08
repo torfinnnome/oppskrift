@@ -44,7 +44,23 @@ const FormField = <
 const useFormField = () => {
   const fieldContext = React.useContext(FormFieldContext)
   const itemContext = React.useContext(FormItemContext)
-  const { getFieldState, formState } = useFormContext()
+  const methods = useFormContext()
+
+  if (!methods) {
+    // This error indicates that a form component (FormLabel, FormControl, etc.)
+    // is being used outside of a <Form /> component wrapper, or the <Form />
+    // component is not correctly receiving the methods from useForm().
+    let errorMessage = "Form context is not available. Ensure that components like FormLabel, FormControl, etc., are used within a <Form /> component."
+    if (fieldContext && fieldContext.name) {
+      // Note: fieldContext might also be empty if FormField is not used,
+      // which would be another structural issue.
+      errorMessage += ` This might be related to the field "${fieldContext.name}".`;
+    }
+    console.error("Form context error details:", { fieldContext, itemContext });
+    throw new Error(errorMessage);
+  }
+
+  const { getFieldState, formState } = methods;
 
   const fieldState = getFieldState(fieldContext.name, formState)
 

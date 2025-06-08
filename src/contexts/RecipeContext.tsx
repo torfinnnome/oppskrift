@@ -122,6 +122,9 @@ const formatRecipeToHTML = (recipe: Recipe, t: (key: string, params?:any) => str
   if (recipe.description) {
     html += `<p style="font-style: italic; color: #555; margin-top: 0;">${recipe.description}</p>`;
   }
+  if (recipe.sourceUrl) {
+    html += `<p style="font-size: 0.9em; color: #555;"><strong>${t('source_url_label')}:</strong> <a href="${recipe.sourceUrl}" target="_blank" rel="noopener noreferrer">${recipe.sourceUrl}</a></p>`;
+  }
   html += `<div class="meta" style="font-size: 0.9em; color: #777; margin-bottom: 15px;">`;
   if (recipe.servingsValue) html += `<span style="margin-right: 15px;"><strong>${t('export_header_yield')}:</strong> ${recipe.servingsValue} ${servingsUnitText}</span>`;
   if (recipe.prepTime) html += `<span style="margin-right: 15px;"><strong>${t('export_header_prep_time')}:</strong> ${recipe.prepTime}</span>`;
@@ -174,6 +177,7 @@ const formatRecipeToMarkdown = (recipe: Recipe, t: (key: string, params?:any) =>
   const servingsUnitText = recipe.servingsUnit === 'pieces' ? t('servings_unit_pieces') : t('servings_unit_servings');
   let md = `# ${recipe.title}\n\n`;
   if (recipe.description) md += `_${recipe.description}_\n\n`;
+  if (recipe.sourceUrl) md += `**${t('source_url_label')}:** [${recipe.sourceUrl}](${recipe.sourceUrl})\n\n`;
   if (recipe.servingsValue) md += `**${t('export_header_yield')}:** ${recipe.servingsValue} ${servingsUnitText}\n`;
   if (recipe.prepTime) md += `**${t('export_header_prep_time')}:** ${recipe.prepTime}\n`;
   if (recipe.cookTime) md += `**${t('export_header_cook_time')}:** ${recipe.cookTime}\n\n`;
@@ -256,6 +260,7 @@ export const RecipeProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       ingredientGroups: ingredientGroupsData,
       instructions: instructionSteps, 
       tips: tipSteps,
+      sourceUrl: docData.sourceUrl || undefined,
       tags: Array.isArray(docData.tags) ? docData.tags : [],
       categories: Array.isArray(docData.categories) ? docData.categories : [],
       createdAt: docData.createdAt || new Date().toISOString(),
@@ -314,6 +319,7 @@ export const RecipeProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       instructions: ensureInstructionStepsStructure(recipeData.instructions || []).map(s => ({...s, isChecked: false})),
       tips: ensureTipStepsStructure(recipeData.tips || []).map(tip => ({...tip, isChecked: false})),
       isPublic: recipeData.isPublic || false,
+      sourceUrl: recipeData.sourceUrl || null, // Ensure sourceUrl is null if falsy
       createdBy: user.uid, 
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -334,7 +340,6 @@ export const RecipeProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     const { servings, ...payloadToSaveRest } = { ...newRecipeData, ingredientGroups: cleanedIngredientGroups, instructions: cleanedInstructions, tips: cleanedTips };
     delete (payloadToSaveRest as any).servings;
 
-
     const docRef = await addDoc(collection(db, "recipes"), payloadToSaveRest);
     return { ...newRecipeData, id: docRef.id }; 
   };
@@ -350,6 +355,7 @@ export const RecipeProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       ingredientGroups: ensureIngredientGroupStructure(updatedRecipe.ingredientGroups || [], t),
       instructions: ensureInstructionStepsStructure(updatedRecipe.instructions || []).map(s => ({...s, isChecked: false})),
       tips: ensureTipStepsStructure(updatedRecipe.tips || []).map(tip => ({...tip, isChecked: false})),
+      sourceUrl: updatedRecipe.sourceUrl || null, // Ensure sourceUrl is null if falsy
       isPublic: updatedRecipe.isPublic || false,
       updatedAt: new Date().toISOString(),
     };
@@ -546,6 +552,7 @@ export const RecipeProvider: React.FC<{ children: ReactNode }> = ({ children }) 
                                           ...restOfRecipe,
                                           servingsValue: r.servingsValue,
                                           servingsUnit: r.servingsUnit,
+                                          sourceUrl: r.sourceUrl || null, // Ensure null for undefined/empty
                                           ingredientGroups: r.ingredientGroups.map(g => ({...g, ingredients: g.ingredients.map(({fieldId, ...restI}) => restI), fieldId: undefined})).map(({fieldId, ...restG})=> restG),
                                           instructions: r.instructions.map(({fieldId, ...restS}) => ({...restS, isChecked: false})),
                                           tips: r.tips ? r.tips.map(({fieldId, ...restT}) => ({...restT, isChecked: false})) : [],
@@ -605,6 +612,7 @@ export const RecipeProvider: React.FC<{ children: ReactNode }> = ({ children }) 
           prepTime: recipeObj.prepTime || "",
           cookTime: recipeObj.cookTime || "",
           imageUrl: recipeObj.imageUrl || "",
+          sourceUrl: recipeObj.sourceUrl || null, // Ensure null for undefined/empty
           isPublic: recipeObj.isPublic === true, 
           createdBy: user.uid, 
         };
