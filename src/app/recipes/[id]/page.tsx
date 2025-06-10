@@ -38,8 +38,6 @@ interface ScaledIngredientGroup extends Omit<IngredientGroupType, 'ingredients'>
   ingredients: { name: string; quantity: string; unit: string; id: string; }[];
 }
 
-// Helper functions for mapping Firestore data, similar to those in RecipeContext
-// These are needed here for the direct fetch fallback.
 const ensureIngredientStructureOnPage = (ingredients: Partial<IngredientType>[]): IngredientType[] => {
   return ingredients.map(ing => ({
     id: ing.id || uuidv4(),
@@ -133,6 +131,14 @@ const mapFetchedDocToRecipe = (docData: any, docId: string, t: (key: string) => 
     } as RecipeType;
 };
 
+const scaleIngredientQuantityForDisplay = (quantityStr: string, originalServingsValue: number, newServingsValue: number): string => {
+    if (typeof quantityStr !== 'string') return '';
+    const quantityNum = parseFloat(quantityStr.replace(',', '.'));
+    if (isNaN(quantityNum) || originalServingsValue <= 0 || newServingsValue <= 0) return quantityStr;
+    const scaledQuantity = (quantityNum / originalServingsValue) * newServingsValue;
+    let formattedQuantity = Number.isInteger(scaledQuantity) ? scaledQuantity.toString() : Number(scaledQuantity.toFixed(2)).toString().replace(/\.?0+$/, '');
+    return formattedQuantity.replace('.', ',');
+};
 
 const linkifyText = (text: string): React.ReactNode[] => {
   if (!text) return [];
@@ -165,12 +171,14 @@ function RecipeDetailPageContent() {
   const { getRecipeById, deleteRecipe, exportSingleRecipeAsHTML, exportSingleRecipeAsMarkdown, submitRecipeRating, loading: recipesLoadingFromContext, updateRecipe } = useRecipes();
   const { user, isAdmin, loading: authLoading } = useAuth();
   const { addMultipleItems: addItemsToShoppingList } = useShoppingList();
-  const { t } = useTranslation();
+  const { t, currentLanguage } = useTranslation();
 
   const [recipe, setRecipe] = useState<RecipeType | null | undefined>(undefined);
   const [isLoadingRecipe, setIsLoadingRecipe] = useState(true);
 
-  const [numServings, setNumServings] = useState(1);
+  const [numServings, setNumServings] = useState(1); // Holds the numeric value for calculations
+  const [displayServingsInput, setDisplayServingsInput] = useState("1"); // Holds the string for the input field
+  
   const [isExportingHtml, setIsExportingHtml] = useState(false);
   const [isExportingMarkdown, setIsExportingMarkdown] = useState(false);
   const [keepScreenOn, setKeepScreenOn] = useState(false);
@@ -192,7 +200,7 @@ function RecipeDetailPageContent() {
     if (foundRecipe) {
       setRecipe(foundRecipe);
       setIsLoadingRecipe(false);
-    } else if (!recipesLoadingFromContext) { // Only try direct fetch if context is done loading and recipe not found
+    } else if (!recipesLoadingFromContext) { 
       try {
         const recipeDocRef = doc(db, "recipes", recipeId);
         const docSnap = await getDoc(recipeDocRef);
@@ -200,7 +208,7 @@ function RecipeDetailPageContent() {
           const fetchedRecipe = mapFetchedDocToRecipe(docSnap.data(), docSnap.id, t);
           setRecipe(fetchedRecipe);
         } else {
-          setRecipe(null); // Recipe truly not found
+          setRecipe(null); 
         }
       } catch (err) {
         console.error("Error directly fetching recipe:", err);
@@ -208,20 +216,20 @@ function RecipeDetailPageContent() {
       } finally {
         setIsLoadingRecipe(false);
       }
-    } else {
-      // Context is still loading, wait for it to finish.
-      // isLoadingRecipe remains true.
     }
   }, [recipeId, getRecipeById, recipesLoadingFromContext, t]);
 
 
   useEffect(() => {
     loadRecipe();
-  }, [loadRecipe]); // loadRecipe is stable due to useCallback and its dependencies
+  }, [loadRecipe]); 
 
   useEffect(() => {
     if (recipe) {
-      setNumServings(recipe.servingsValue > 0 ? recipe.servingsValue : 1);
+      const initialServings = recipe.servingsValue > 0 ? recipe.servingsValue : 1;
+      setNumServings(initialServings);
+      // displayServingsInput will be updated by the effect below watching numServings
+
       const initialInstructionStates: Record<string, boolean> = {};
       (recipe.instructions || []).forEach(step => { initialInstructionStates[step.id] = false; });
       setInstructionStepStates(initialInstructionStates);
@@ -233,6 +241,11 @@ function RecipeDetailPageContent() {
       setTipStepStates({});
     }
   }, [recipe]);
+
+  // Effect to sync displayServingsInput when numServings changes (e.g., from initial load or +/- buttons)
+  useEffect(() => {
+    setDisplayServingsInput(String(numServings).replace('.', currentLanguage === 'no' ? ',' : '.'));
+  }, [numServings, currentLanguage]);
 
 
   useEffect(() => {
@@ -254,14 +267,7 @@ function RecipeDetailPageContent() {
 
   const scaledIngredientGroups: ScaledIngredientGroup[] = useMemo(() => {
     if (!recipe || !recipe.ingredientGroups) return [];
-    const scaleIngredientQuantityForDisplay = (quantityStr: string, originalServingsValue: number, newServingsValue: number): string => {
-        if (typeof quantityStr !== 'string') return '';
-        const quantityNum = parseFloat(quantityStr.replace(',', '.'));
-        if (isNaN(quantityNum) || originalServingsValue <= 0 || newServingsValue <= 0) return quantityStr;
-        const scaledQuantity = (quantityNum / originalServingsValue) * newServingsValue;
-        let formattedQuantity = Number.isInteger(scaledQuantity) ? scaledQuantity.toString() : Number(scaledQuantity.toFixed(2)).toString().replace(/\.?0+$/, '');
-        return formattedQuantity.replace('.', ',');
-    };
+    
     return recipe.ingredientGroups.map(group => ({
       ...group,
       ingredients: group.ingredients.map(ing => ({
@@ -271,12 +277,40 @@ function RecipeDetailPageContent() {
     }));
   }, [recipe, numServings]);
 
-  const handleServingsChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const value = parseInt(event.target.value, 10);
-    if (value > 0) setNumServings(value);
+  const handleDisplayServingsInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const rawValue = event.target.value;
+    setDisplayServingsInput(rawValue); // Update display state immediately
+  
+    const valueStr = rawValue.replace(',', '.');
+  
+    // Only update numServings if it's a complete, valid number
+    // Allows "1." or "" or "1.2" to be typed without immediate parsing errors for numServings
+    if (/^[0-9]+(\.[0-9]*)?$/.test(valueStr) && valueStr !== "" && !valueStr.endsWith('.')) {
+        const value = parseFloat(valueStr);
+        if (!isNaN(value) && value > 0) {
+            setNumServings(value); // Update the actual numeric state
+        }
+    } else if (valueStr === "") {
+      // If input is cleared, maybe revert to a default or last valid numServings
+      // For now, let numServings remain and handle final validation onBlur
+    }
   };
+  
+  const handleDisplayServingsInputBlur = () => {
+    const valueStr = displayServingsInput.replace(',', '.');
+    let value = parseFloat(valueStr);
+  
+    if (!isNaN(value) && value > 0) {
+      setNumServings(value); // Final update to numServings
+      // displayServingsInput will be updated by the useEffect watching numServings
+    } else {
+      // Invalid input on blur, revert displayServingsInput to the current numServings formatted
+      setDisplayServingsInput(String(numServings).replace('.', currentLanguage === 'no' ? ',' : '.'));
+    }
+  };
+
   const incrementServings = () => setNumServings(prev => prev + 1);
-  const decrementServings = () => setNumServings(prev => (prev > 1 ? prev - 1 : 1));
+  const decrementServings = () => setNumServings(prev => Math.max(0.1, prev - 1)); 
 
   const handleDeleteRecipe = async () => {
     if (!recipe?.id) return;
@@ -390,7 +424,7 @@ function RecipeDetailPageContent() {
           <div className="grid md:grid-cols-3 gap-6 text-sm items-center">
             {recipe.prepTime && <div className="flex items-center gap-2"><Clock className="h-5 w-5 text-primary" /><div><strong>{t('prep_time')}:</strong> {recipe.prepTime}</div></div>}
             {recipe.cookTime && <div className="flex items-center gap-2"><Clock className="h-5 w-5 text-primary" /><div><strong>{t('cook_time')}:</strong> {recipe.cookTime}</div></div>}
-            <div className="flex items-center gap-2"><Utensils className="h-5 w-5 text-primary" /><div><strong>{t('servings')}:</strong> {recipe.servingsValue} {displayServingsUnit}</div></div>
+            <div className="flex items-center gap-2"><Utensils className="h-5 w-5 text-primary" /><div><strong>{t('servings')}:</strong> {numServings} {displayServingsUnit}</div></div>
           </div>
 
           <div className="space-y-2">
@@ -422,7 +456,20 @@ function RecipeDetailPageContent() {
                 <>
                   <div className="space-y-2">
                     <Label htmlFor="servings-input" className="text-base">{t('scale_servings')} {numServings} {displayServingsUnit}:</Label>
-                    <div className="flex items-center gap-2"><Button variant="outline" size="icon" onClick={decrementServings} aria-label={t('decrease_servings')}><Minus className="h-4 w-4" /></Button><Input id="servings-input" type="number" value={numServings} onChange={handleServingsChange} min="1" className="w-20 text-center hide-number-spinners" aria-label={t('number_of_servings')} /><Button variant="outline" size="icon" onClick={incrementServings} aria-label={t('increase_servings')}><Plus className="h-4 w-4" /></Button></div>
+                    <div className="flex items-center gap-2">
+                        <Button variant="outline" size="icon" onClick={decrementServings} aria-label={t('decrease_servings')}><Minus className="h-4 w-4" /></Button>
+                        <Input 
+                          id="servings-input" 
+                          type="text" 
+                          inputMode="decimal"
+                          value={displayServingsInput}
+                          onChange={handleDisplayServingsInputChange} 
+                          onBlur={handleDisplayServingsInputBlur}
+                          className="w-20 text-center" 
+                          aria-label={t('number_of_servings')} 
+                        />
+                        <Button variant="outline" size="icon" onClick={incrementServings} aria-label={t('increase_servings')}><Plus className="h-4 w-4" /></Button>
+                    </div>
                   </div>
                   {scaledIngredientGroups.map(group => (
                     <div key={group.id} className="mt-4">
@@ -522,4 +569,3 @@ export default function RecipeDetailPage() {
     </Suspense>
   );
 }
-
