@@ -354,7 +354,8 @@
   "drop_image_here_recipe": "Arrastra la imagen aquí, o haz clic para subir",
   "max_image_size_info": "Máx. {{maxSize}}MB (JPG, PNG, WEBP)",
   "image_section_title": "Imagen de la Receta",
-  "image_section_description": "Añade una foto de tu plato. Arrastra y suelta o haz clic para subir."
+  "image_section_description": "Añade una foto para tu receta. Arrastra y suelta, haz clic para subir, o proporciona una URL externa.",
+  "or_external_image_url_label": "O proporciona una URL de imagen externa:",
+  "external_image_url_placeholder": "https://ejemplo.com/tu-imagen.jpg",
+  "invalid_external_image_url": "La URL proporcionada no es una URL de imagen válida."
 }
-
-    

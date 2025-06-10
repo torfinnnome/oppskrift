@@ -22,9 +22,9 @@ import { TipStepField } from "./TipStepField";
 import { useTranslation } from "@/lib/i18n";
 import { parseRecipeFromText, type ParseRecipeOutput } from "@/ai/flows/parse-recipe-from-text-flow";
 import { ocrAndParseRecipeFromImage } from "@/ai/flows/ocr-and-parse-recipe-flow";
-import NextImage from "next/image";
+// Removed NextImage import as we'll use <img> for previews from data/external URLs
 import { toast } from "@/hooks/use-toast";
-import { Loader2, Eye, EyeOff, PlusCircle, Trash2, Wand2, Link as LinkIcon, FileImage, UploadCloud, XCircle, ImageUp, Sparkles } from "lucide-react";
+import { Loader2, Eye, EyeOff, PlusCircle, Trash2, Wand2, Link as LinkIcon, FileImage, UploadCloud, XCircle, ImageUp, Sparkles, ExternalLink } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { v4 as uuidv4 } from "uuid";
 import { DragDropContext, Droppable, Draggable, type DropResult } from '@hello-pangea/dnd';
@@ -73,7 +73,7 @@ const recipeFormSchemaFactory = (t: (key: string) => string) => z.object({
   servingsUnit: z.enum(['servings', 'pieces'], { errorMap: () => ({ message: t("servings_unit_required") }) }),
   prepTime: z.string().optional(),
   cookTime: z.string().optional(),
-  imageUrl: z.string().optional(),
+  imageUrl: z.string().optional(), // Can be data URI or HTTP/S URL
   sourceUrl: z.string().url({ message: t("invalid_url_format") }).optional().or(z.literal('')),
   isPublic: z.boolean().default(false).optional(),
 });
@@ -88,7 +88,7 @@ interface RecipeFormProps {
 const MAX_IMAGE_WIDTH = 800;
 const IMAGE_QUALITY = 0.7;
 const MAX_OCR_IMAGE_SIZE_MB = 4;
-const MAX_RECIPE_IMAGE_SIZE_MB = 5; // Max size for recipe image before client-side resize
+const MAX_RECIPE_IMAGE_SIZE_MB = 5;
 
 async function resizeDataUri(dataUri: string, maxWidth: number, quality: number): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -105,7 +105,7 @@ async function resizeDataUri(dataUri: string, maxWidth: number, quality: number)
       const ctx = canvas.getContext('2d');
       if (!ctx) return reject(new Error("Failed to get canvas context"));
       ctx.drawImage(img, 0, 0, width, height);
-      resolve(canvas.toDataURL('image/jpeg', quality)); // Output as JPEG for better compression
+      resolve(canvas.toDataURL('image/jpeg', quality));
     };
     img.onerror = (err) => reject(new Error("Failed to load image for resizing."));
     img.src = dataUri;
@@ -143,13 +143,13 @@ export function RecipeForm({ initialData, isEditMode = false }: RecipeFormProps)
   const { t, currentLanguage } = useTranslation();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Image state
   const [imagePreview, setImagePreview] = useState<string | null>(initialData?.imageUrl || null);
   const [isProcessingImage, setIsProcessingImage] = useState(false);
   const [imageError, setImageError] = useState<string | null>(null);
   const imageFileInputRef = useRef<HTMLInputElement>(null);
+  const [externalImageUrlInput, setExternalImageUrlInput] = useState(initialData?.imageUrl && initialData.imageUrl.startsWith('http') ? initialData.imageUrl : "");
 
-  // Recipe Text/OCR Import state
+
   const [recipeImportText, setRecipeImportText] = useState("");
   const [isImportingRecipeText, setIsImportingRecipeText] = useState(false);
   const [importTextError, setImportTextError] = useState<string | null>(null);
@@ -162,7 +162,6 @@ export function RecipeForm({ initialData, isEditMode = false }: RecipeFormProps)
   const ocrFileInputRef = useRef<HTMLInputElement>(null);
   const [isDraggingOverOcr, setIsDraggingOverOcr] = useState(false);
   const [isDraggingOverRecipeImage, setIsDraggingOverRecipeImage] = useState(false);
-
 
   const currentRecipeFormSchema = recipeFormSchemaFactory(t);
 
@@ -229,7 +228,14 @@ export function RecipeForm({ initialData, isEditMode = false }: RecipeFormProps)
   });
 
   useEffect(() => {
-    if (initialData?.imageUrl) setImagePreview(initialData.imageUrl);
+    if (initialData?.imageUrl) {
+      setImagePreview(initialData.imageUrl);
+      if (initialData.imageUrl.startsWith('http')) {
+        setExternalImageUrlInput(initialData.imageUrl);
+      } else {
+        setExternalImageUrlInput("");
+      }
+    }
     if (initialData?.sourceUrl) setImportedSourceUrl(initialData.sourceUrl);
     if (initialData) {
       form.setValue('isPublic', initialData.isPublic || false);
@@ -246,16 +252,19 @@ export function RecipeForm({ initialData, isEditMode = false }: RecipeFormProps)
     }
   }, [initialData, form, t]);
 
-  // Reset image preview if form's imageUrl is cleared externally or by reset
   useEffect(() => {
     const subscription = form.watch((value, { name }) => {
       if (name === 'imageUrl' && value.imageUrl !== imagePreview) {
         setImagePreview(value.imageUrl || null);
+        if (value.imageUrl && value.imageUrl.startsWith('http')) {
+          setExternalImageUrlInput(value.imageUrl);
+        } else if (!value.imageUrl) {
+          setExternalImageUrlInput("");
+        }
       }
     });
     return () => subscription.unsubscribe();
   }, [form, imagePreview]);
-
 
   const { fields: groupFields, append: appendGroup, remove: removeGroup } = useFieldArray({
     control: form.control,
@@ -306,13 +315,13 @@ export function RecipeForm({ initialData, isEditMode = false }: RecipeFormProps)
     }
   };
 
-  const processAndSetImage = async (dataUri: string) => {
+  const processAndSetUploadedImage = async (dataUri: string) => {
     setIsProcessingImage(true);
     setImageError(null);
     try {
       toast({ title: t("image_processing_toast_title"), description: t("image_processing_toast_desc") });
       const resizedImageUri = await resizeDataUri(dataUri, MAX_IMAGE_WIDTH, IMAGE_QUALITY);
-      if (resizedImageUri.length > 1048487 * 0.95) { // Check if ~950KB, Firestore limit is ~1MB
+      if (resizedImageUri.length > 1048487 * 0.95) {
         setImageError(t("image_still_too_large_error"));
         toast({ title: t("image_upload_error_title"), description: t("image_still_too_large_error"), variant: "destructive" });
         form.setValue("imageUrl", "");
@@ -320,6 +329,7 @@ export function RecipeForm({ initialData, isEditMode = false }: RecipeFormProps)
       } else {
         form.setValue("imageUrl", resizedImageUri, { shouldValidate: true, shouldDirty: true });
         setImagePreview(resizedImageUri);
+        setExternalImageUrlInput(""); // Clear external URL if upload is successful
       }
     } catch (error: any) {
       setImageError(t("image_upload_error_generic"));
@@ -347,7 +357,7 @@ export function RecipeForm({ initialData, isEditMode = false }: RecipeFormProps)
     const reader = new FileReader();
     reader.onload = (e) => {
       if (e.target?.result) {
-        processAndSetImage(e.target.result as string);
+        processAndSetUploadedImage(e.target.result as string);
       }
     };
     reader.readAsDataURL(file);
@@ -363,12 +373,43 @@ export function RecipeForm({ initialData, isEditMode = false }: RecipeFormProps)
     }
   };
 
+  const handleExternalImageUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setExternalImageUrlInput(e.target.value);
+  };
+
+  const handleExternalImageUrlBlur = () => {
+    const url = externalImageUrlInput.trim();
+    if (url) {
+      // Basic URL validation (starts with http/https)
+      if (url.startsWith('http://') || url.startsWith('https://')) {
+        try {
+            new URL(url); // More robust validation
+            form.setValue("imageUrl", url, { shouldValidate: true, shouldDirty: true });
+            setImagePreview(url);
+            setImageError(null);
+        } catch (_) {
+            setImageError(t("invalid_external_image_url"));
+            toast({ title: t("image_upload_error_title"), description: t("invalid_external_image_url"), variant: "destructive" });
+        }
+      } else if (url !== "") { // if not empty and not a valid URL start
+        setImageError(t("invalid_external_image_url"));
+        toast({ title: t("image_upload_error_title"), description: t("invalid_external_image_url"), variant: "destructive" });
+      }
+    } else { // If input is cleared, and form has an external URL, clear it from form and preview
+        if (imagePreview && imagePreview.startsWith('http')) {
+            form.setValue("imageUrl", "");
+            setImagePreview(null);
+        }
+    }
+  };
+
   const handleClearImage = () => {
     form.setValue("imageUrl", "");
     setImagePreview(null);
+    setExternalImageUrlInput("");
     setImageError(null);
     if (imageFileInputRef.current) {
-      imageFileInputRef.current.value = ""; // Reset file input
+      imageFileInputRef.current.value = "";
     }
   };
 
@@ -401,6 +442,11 @@ export function RecipeForm({ initialData, isEditMode = false }: RecipeFormProps)
     };
     form.reset(formValuesToSet);
     setImagePreview(parsedData.extractedImageUrl || null);
+    if (parsedData.extractedImageUrl && parsedData.extractedImageUrl.startsWith('http')) {
+        setExternalImageUrlInput(parsedData.extractedImageUrl);
+    } else {
+        setExternalImageUrlInput("");
+    }
   };
 
   const handleImportRecipeText = async () => {
@@ -507,7 +553,6 @@ export function RecipeForm({ initialData, isEditMode = false }: RecipeFormProps)
         <ShadcnCardDescription>{t('fill_recipe_details')}</ShadcnCardDescription>
       </CardHeader>
       <CardContent>
-        {/* AI Import Sections */}
         <Card className="mb-6 bg-muted/20 border-dashed">
           <CardHeader>
             <CardTitle className="text-xl flex items-center gap-2"><Wand2 className="h-5 w-5 text-primary" />{t('recipe_import_ai_title')}</CardTitle>
@@ -552,9 +597,8 @@ export function RecipeForm({ initialData, isEditMode = false }: RecipeFormProps)
             </CardContent>
         </Card>
 
-        {/* Main Recipe Form */}
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4"> {/* Reduced space-y from 6 to 4 */}
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <DragDropContext onDragEnd={onDragEnd}>
               <FormField control={form.control} name="title" render={({ field }) => (
                 <FormItem>
@@ -564,7 +608,6 @@ export function RecipeForm({ initialData, isEditMode = false }: RecipeFormProps)
                 </FormItem>
               )} />
 
-              {/* New Image Upload Section */}
               <Card className="bg-card border">
                 <CardHeader>
                     <CardTitle className="text-lg">{t('image_section_title')}</CardTitle>
@@ -601,6 +644,22 @@ export function RecipeForm({ initialData, isEditMode = false }: RecipeFormProps)
                     )}
                     <Input id="image-upload-input" type="file" accept="image/jpeg,image/png,image/webp,image/gif" onChange={(e) => handleImageFileSelected(e.target.files?.[0] || null)} className="hidden" ref={imageFileInputRef} />
                     
+                    <div className="space-y-1">
+                        <Label htmlFor="external-image-url" className="text-xs text-muted-foreground">{t('or_external_image_url_label')}</Label>
+                        <div className="flex items-center gap-2">
+                            <ExternalLink className="h-4 w-4 text-muted-foreground shrink-0" />
+                            <Input 
+                                id="external-image-url"
+                                type="url" 
+                                placeholder={t('external_image_url_placeholder')} 
+                                value={externalImageUrlInput}
+                                onChange={handleExternalImageUrlChange}
+                                onBlur={handleExternalImageUrlBlur}
+                                className="h-9 text-sm"
+                                disabled={isProcessingImage}
+                            />
+                        </div>
+                    </div>
                     {imageError && <FormMessage>{imageError}</FormMessage>}
                 </CardContent>
               </Card>
@@ -692,7 +751,7 @@ export function RecipeForm({ initialData, isEditMode = false }: RecipeFormProps)
               </div>
             </DragDropContext>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4"> {/* Reduced gap from 6 to 4 */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField control={form.control} name="servingsValue" render={({ field }) => (
                   <FormItem><FormLabel>{t('servings_value_label')}</FormLabel><FormControl><Input type="number" placeholder={t('servings_placeholder_value')} {...field} /></FormControl><FormMessage>{translateError(form.formState.errors.servingsValue?.message)}</FormMessage></FormItem>
               )} />
@@ -768,5 +827,3 @@ function NestedIngredientArray({ groupIndex, control }: NestedIngredientArrayPro
     </div>
   );
 }
-
-    

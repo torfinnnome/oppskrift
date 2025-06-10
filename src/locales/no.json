@@ -354,7 +354,8 @@
   "drop_image_here_recipe": "Slipp bildet her, eller klikk for å laste opp",
   "max_image_size_info": "Maks {{maxSize}}MB (JPG, PNG, WEBP)",
   "image_section_title": "Oppskriftsbilde",
-  "image_section_description": "Legg til et bilde av retten din. Dra og slipp eller klikk for å laste opp."
+  "image_section_description": "Legg til et bilde for oppskriften din. Dra og slipp, klikk for å laste opp, eller oppgi en ekstern URL.",
+  "or_external_image_url_label": "Eller oppgi en ekstern bilde-URL:",
+  "external_image_url_placeholder": "https://eksempel.no/ditt-bilde.jpg",
+  "invalid_external_image_url": "Den oppgitte URL-en er ikke en gyldig bilde-URL."
 }
-
-    
