@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTranslation } from "@/lib/i18n";
-import { PlusCircle, Search, Frown, XCircle, Loader2, Tag, Bookmark, Eye, Users, Lock, ListFilter } from "lucide-react";
+import { PlusCircle, Search, Frown, XCircle, Loader2, Tag, Bookmark, Eye, Users, Lock, ListFilter, BookOpen } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -36,22 +36,20 @@ function HomePageContent() {
   const tagFilter = searchParams.get("tag");
 
   const [searchTerm, setSearchTerm] = useState("");
-  // Initialize to "all-viewable", useEffect will adjust it based on auth status and URL params.
   const [visibilityFilter, setVisibilityFilter] = useState<VisibilityFilter>("all-viewable");
 
   useEffect(() => {
     if (!authLoading) {
       if (user) {
-        // If logged in and no category/tag filters from URL, default to "my-all"
         if (!categoryFilter && !tagFilter) {
-          setVisibilityFilter("my-all");
+          setVisibilityFilter("all-viewable"); // Default for logged-in users is to see their own + community public
         } else {
-          // If logged in AND category/tag filters ARE present, default to "all-viewable"
           setVisibilityFilter("all-viewable");
         }
       } else {
-        // If logged out, default to "all-viewable" (which context limits to public)
-        setVisibilityFilter("all-viewable");
+        // Logged-out users: "all-viewable" contextually means nothing for list views here.
+        // The UI will show a welcome message instead of trying to list based on this.
+        setVisibilityFilter("all-viewable"); 
       }
     }
   }, [user, authLoading, categoryFilter, tagFilter]);
@@ -60,16 +58,14 @@ function HomePageContent() {
 
   const handleClearFilters = () => {
     router.push("/");
-    // When clearing filters, if logged in, reset to "my-all", otherwise "all-viewable"
-    setVisibilityFilter(user ? "my-all" : "all-viewable");
+    setVisibilityFilter(user ? "all-viewable" : "all-viewable"); 
     setSearchTerm("");
   };
   
   const filteredRecipes = useMemo(() => {
-    let currentRecipes = [...recipes]; // Start with all recipes from context
+    let currentRecipes = [...recipes]; 
 
-    // 1. Apply visibility filter based on the state (user's explicit choice or initial default)
-    if (user) { // This block only applies if a user is logged in
+    if (user) { 
       if (visibilityFilter === "my-all") {
         currentRecipes = currentRecipes.filter(recipe => recipe.createdBy === user.uid);
       } else if (visibilityFilter === "my-public") {
@@ -79,12 +75,14 @@ function HomePageContent() {
       } else if (visibilityFilter === "community-public") {
         currentRecipes = currentRecipes.filter(recipe => recipe.createdBy !== user.uid && recipe.isPublic);
       }
-      // If visibilityFilter is "all-viewable", recipes from context (user's + community public) are used.
-    } else { // Logged-out users only see public recipes (already filtered by context, but good to be explicit)
-        currentRecipes = currentRecipes.filter(recipe => recipe.isPublic);
+      // If visibilityFilter is "all-viewable", context already provides (user's + community public).
+    } else { 
+        // For unauthenticated users, no recipes should be listed on the main page.
+        // The RecipeContext might still fetch public recipes for direct URL access,
+        // but this component won't display them in list form.
+        return []; 
     }
 
-    // 2. Apply category or tag filter (from URL params)
     if (categoryFilter) {
       currentRecipes = currentRecipes.filter(recipe =>
         recipe.categories && recipe.categories.some(category => category.toLowerCase() === categoryFilter.toLowerCase())
@@ -95,7 +93,6 @@ function HomePageContent() {
       );
     }
 
-    // 3. Apply search term filter
     if (searchTerm) {
       const lowerSearchTerm = searchTerm.toLowerCase();
       currentRecipes = currentRecipes.filter(recipe => {
@@ -111,13 +108,12 @@ function HomePageContent() {
   }, [recipes, user, visibilityFilter, categoryFilter, tagFilter, searchTerm]);
 
 
-  const publicRecipesFromContext = useMemo(() => recipes.filter(r => r.isPublic), [recipes]);
-
   if (!user && !authLoading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[calc(100vh-200px)] text-center">
-        <h1 className="text-3xl font-bold mb-4">{t('app_title')}</h1>
-        <p className="text-lg text-muted-foreground mb-6">{t('description')}</p>
+        <BookOpen className="h-24 w-24 text-primary mb-6" />
+        <h1 className="text-3xl font-bold mb-4">{t('welcome_to_oppskrift_title')}</h1>
+        <p className="text-lg text-muted-foreground mb-8 max-w-md">{t('welcome_to_oppskrift_desc_unapproved')}</p>
         <div className="space-x-4">
           <Button asChild size="lg">
             <Link href="/login">{t('login')}</Link>
@@ -126,39 +122,24 @@ function HomePageContent() {
             <Link href="/signup">{t('signup')}</Link>
           </Button>
         </div>
-        { publicRecipesFromContext.length > 0 && (
-          <div className="mt-12 w-full max-w-4xl">
-            <h2 className="text-2xl font-semibold mb-4">{t('public_recipes_preview_title')}</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {publicRecipesFromContext.slice(0,3).map(recipe => (
-                <RecipeCard key={recipe.id} recipe={recipe} />
-              ))}
-            </div>
-             {publicRecipesFromContext.length > 3 && (
-              <Button variant="link" asChild className="mt-4">
-                <Link href="/login">{t('login_to_see_more_public_recipes')}</Link>
-              </Button>
-            )}
-          </div>
-        )}
+         <p className="text-sm text-muted-foreground mt-8">
+          {t('direct_url_access_note')}
+        </p>
       </div>
     );
   }
   
   const activeFilterValue = categoryFilter || tagFilter;
   const activeFilterType = categoryFilter ? 'category' : (tagFilter ? 'tag' : null);
-  // Determine if "My Recipes (All)" should be considered an "active filter" for UI badge purposes
-  // It's an active filter if the user is logged in AND visibilityFilter is "my-all" AND it's different from the scenario where no URL params are present
-  // (because in that case, "my-all" is the default)
   const myAllIsActiveBadge = user && visibilityFilter === "my-all" && (!!categoryFilter || !!tagFilter);
-  const otherVisibilityFilterActive = user && visibilityFilter !== "all-viewable" && visibilityFilter !== "my-all";
+  const otherVisibilityFilterActive = user && visibilityFilter !== "all-viewable"; // Simplified, "all-viewable" is the default for logged-in.
   const isAnyFilterActive = activeFilterValue || searchTerm || myAllIsActiveBadge || otherVisibilityFilterActive;
 
 
   return (
     <div className="space-y-8">
       <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-        <h1 className="text-3xl font-bold tracking-tight">{t('my_recipes')}</h1>
+        <h1 className="text-3xl font-bold tracking-tight">{user ? t('recipes_title_authenticated') : t('app_title')}</h1>
         <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
           <div className="relative flex-grow sm:flex-grow-0 sm:w-64">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -212,11 +193,10 @@ function HomePageContent() {
               <Button variant="ghost" size="xs" onClick={() => router.push(categoryFilter ? `/?category=${categoryFilter}` : "/")} className="ml-1 h-5 w-5 p-0.5"><XCircle className="h-3 w-3"/></Button>
             </Badge>
           )}
-          {/* Show visibility filter badge if it's not the implicit default 'my-all' or 'all-viewable' (when no other filters) */}
-          {user && (visibilityFilter !== "all-viewable" || (categoryFilter || tagFilter)) && (visibilityFilter !== "my-all" || (categoryFilter || tagFilter)) && (
+          {user && visibilityFilter !== "all-viewable" && (
             <Badge variant="default" className="flex items-center gap-1">
               <ListFilter className="h-3 w-3" /> {t(visibilityFilterOptions.find(opt => opt.value === visibilityFilter)?.labelKey || 'Filter')}
-               <Button variant="ghost" size="xs" onClick={() => setVisibilityFilter(user && !categoryFilter && !tagFilter ? "my-all" : "all-viewable")} className="ml-1 h-5 w-5 p-0.5 hover:bg-primary-foreground/20"><XCircle className="h-3 w-3"/></Button>
+               <Button variant="ghost" size="xs" onClick={() => setVisibilityFilter("all-viewable")} className="ml-1 h-5 w-5 p-0.5 hover:bg-primary-foreground/20"><XCircle className="h-3 w-3"/></Button>
             </Badge>
           )}
           
@@ -239,29 +219,36 @@ function HomePageContent() {
             </div>
           ))}
         </div>
-      ) : filteredRecipes.length > 0 ? (
+      ) : user && filteredRecipes.length > 0 ? ( // Only show list if user is logged in and has recipes
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {filteredRecipes.map((recipe) => (
             <RecipeCard key={recipe.id} recipe={recipe} />
           ))}
         </div>
-      ) : (
+      ) : user ? ( // Logged in, but no recipes match filters or none exist
         <div className="text-center py-12">
           <Frown className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
           <p className="text-xl text-muted-foreground">
             {activeFilterType === 'category' && categoryFilter ? t('no_recipes_found_for_category', { category: categoryFilter }) : 
              activeFilterType === 'tag' && tagFilter ? t('no_recipes_found_for_tag', { tag: tagFilter }) :
-             (user && visibilityFilter !== "all-viewable" && visibilityFilter !== "my-all") ? t('no_recipes_found_for_visibility', { filter: t(visibilityFilterOptions.find(opt => opt.value === visibilityFilter)?.labelKey || 'current filter')}) :
+             (user && visibilityFilter !== "all-viewable") ? t('no_recipes_found_for_visibility', { filter: t(visibilityFilterOptions.find(opt => opt.value === visibilityFilter)?.labelKey || 'current filter')}) :
              searchTerm ? t('no_recipes_found_for_search', { term: searchTerm }) :
-             t('no_recipes_found')}
+             t('no_recipes_found_authenticated_user')}
           </p>
           {isAnyFilterActive && (
              <Button variant="link" onClick={handleClearFilters} className="mt-2">
                 {t('show_all_recipes')}
             </Button>
           )}
+           {!isAnyFilterActive && (
+             <Button asChild className="mt-4">
+              <Link href="/recipes/new">
+                <PlusCircle className="mr-2 h-4 w-4" /> {t('add_your_first_recipe_button')}
+              </Link>
+            </Button>
+           )}
         </div>
-      )}
+      ) : null }
     </div>
   );
 }

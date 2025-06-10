@@ -37,6 +37,8 @@
   "shopping_list": "Handleliste",
   "generate_shopping_list": "Generer handleliste",
   "no_recipes_found": "Ingen oppskrifter funnet. Legg til din første oppskrift!",
+  "no_recipes_found_authenticated_user": "Du har ikke lagt til noen oppskrifter ennå, eller ingen oppskrifter passer til dine nåværende filtre.",
+  "add_your_first_recipe_button": "Legg til din første oppskrift",
   "search_recipes": "Søk oppskrifter...",
   "search_recipes_placeholder_enhanced": "Søk tittel, ingredienser, etiketter...",
   "ingredient_name": "Ingrediensnavn",
@@ -196,6 +198,9 @@
   "no_recipes_found_for_tag": "Ingen oppskrifter funnet for etiketten \"{{tag}}\".",
   "make_recipe_public": "Gjør oppskrift offentlig",
   "recipe_public_description": "Offentlige oppskrifter er synlige for alle brukere.",
+  "make_recipe_public_default_true": "Oppskriftens synlighet",
+  "recipe_public_description_true_default": "Denne oppskriften er OFFENTLIG som standard og synlig for andre innloggede brukere.",
+  "recipe_private_description_explicit": "Denne oppskriften er PRIVAT og kun synlig for deg.",
   "public_recipe_indicator": "Offentlig",
   "private_recipe_indicator": "Privat",
   "data_management": "Databehandling",
@@ -357,5 +362,11 @@
   "image_section_description": "Legg til et bilde for oppskriften din. Dra og slipp, klikk for å laste opp, eller oppgi en ekstern URL.",
   "or_external_image_url_label": "Eller oppgi en ekstern bilde-URL:",
   "external_image_url_placeholder": "https://eksempel.no/ditt-bilde.jpg",
-  "invalid_external_image_url": "Den oppgitte URL-en er ikke en gyldig bilde-URL."
+  "invalid_external_image_url": "Den oppgitte URL-en er ikke en gyldig bilde-URL.",
+  "error_opening_new_tab_title": "Popup-blokkering?",
+  "error_opening_new_tab_desc": "Kunne ikke åpne innholdet i en ny fane. Vennligst sjekk nettleserens innstillinger for popup-blokkering.",
+  "welcome_to_oppskrift_title": "Velkommen til Oppskrift!",
+  "welcome_to_oppskrift_desc_unapproved": "Din personlige oppskriftsbok. Logg inn eller registrer deg for å begynne å administrere oppskriftene dine. Hvis du nettopp har registrert deg, må en administrator godkjenne kontoen din før du får full tilgang til alle funksjoner.",
+  "direct_url_access_note": "Merk: Oppskrifter kan vises via direkte URL hvis de deles.",
+  "recipes_title_authenticated": "Oppskrifter"
 }

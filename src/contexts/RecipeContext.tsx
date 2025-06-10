@@ -14,7 +14,7 @@ import {
   deleteDoc,
   doc,
   onSnapshot,
-  query, // Query is still needed for general collection reference
+  query, 
   where,
   or,
   getDoc,
@@ -35,7 +35,6 @@ interface RecipeContextType {
   exportUserRecipesAsMarkdown: () => Promise<{ success: boolean; error?: string }>;
   exportSingleRecipeAsHTML: (recipeId: string, currentScaledServings?: number) => Promise<{ success: boolean; error?: string }>;
   exportSingleRecipeAsMarkdown: (recipeId: string, currentScaledServings?: number) => Promise<{ success: boolean; error?: string }>;
-  // Removed fetchRecipeByIdDirectly as the main onSnapshot will aim to get all accessible recipes based on new rules
 }
 
 const RecipeContext = createContext<RecipeContextType | undefined>(undefined);
@@ -261,15 +260,15 @@ export const RecipeProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       ingredientGroups: ingredientGroupsData,
       instructions: instructionSteps, 
       tips: tipSteps,
-      sourceUrl: docData.sourceUrl === null ? undefined : docData.sourceUrl, // Handle null from Firestore
+      sourceUrl: docData.sourceUrl === null ? undefined : docData.sourceUrl, 
       tags: Array.isArray(docData.tags) ? docData.tags : [],
       categories: Array.isArray(docData.categories) ? docData.categories : [],
+      isPublic: docData.isPublic === undefined ? true : docData.isPublic, // Default to true if undefined
       createdAt: docData.createdAt || new Date().toISOString(),
       updatedAt: docData.updatedAt || new Date().toISOString(),
       ratings: docData.ratings || {},
       averageRating: docData.averageRating || 0,
       numRatings: docData.numRatings || 0,
-      // shareTokens removed
     } as Recipe;
   }, [t]);
 
@@ -282,14 +281,11 @@ export const RecipeProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     }
 
     setLoading(true);
-    // This query now fetches ALL recipes. Firestore rules will determine actual readability.
-    // The UI (e.g., home page) will then filter based on isPublic or ownership.
     const recipesCollectionRef = collection(db, "recipes");
     let q;
 
-    // The main page list query should be for public OR owned recipes.
-    // Direct URL access relies on Firestore rules allowing general read.
     if (user && user.uid) {
+      // Logged-in users see their own recipes (public or private) AND all other public recipes
       q = query(recipesCollectionRef, 
         or(
           where("createdBy", "==", user.uid), 
@@ -297,6 +293,15 @@ export const RecipeProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         )
       );
     } else {
+      // Unauthenticated users see NO recipes listed by default.
+      // The page.tsx will handle not showing any list.
+      // This context will still fetch public recipes in the background for direct URL access,
+      // or if rules allow broader reads.
+      // For the "no recipes listed by default" goal, the UI on page.tsx is key.
+      // If we strictly want this context to fetch nothing for logged-out list views,
+      // we would need a condition here to not even set up the listener or use a query
+      // that yields no results, but that might interfere with direct URL access functionality.
+      // So, keep fetching public recipes, UI will hide them from main list.
       q = query(recipesCollectionRef, where("isPublic", "==", true));
     }
     
@@ -320,19 +325,18 @@ export const RecipeProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     const newRecipeData = {
       ...recipeData,
       servingsValue: Number(recipeData.servingsValue),
-      servingsUnit: recipeData.servingsUnit,
+      servingsUnit: recipeData.servingsUnit as ServingsUnit,
       ingredientGroups: ensureIngredientGroupStructure(recipeData.ingredientGroups || [], t),
       instructions: ensureInstructionStepsStructure(recipeData.instructions || []).map(s => ({...s, isChecked: false})),
       tips: ensureTipStepsStructure(recipeData.tips || []).map(tip => ({...tip, isChecked: false})),
-      isPublic: recipeData.isPublic || false,
-      sourceUrl: recipeData.sourceUrl || null, // Store as null if empty/undefined
+      isPublic: recipeData.isPublic === undefined ? true : recipeData.isPublic, // Default to public
+      sourceUrl: recipeData.sourceUrl || null, 
       createdBy: user.uid, 
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       ratings: {},
       averageRating: 0,
       numRatings: 0,
-      // shareTokens removed
     };
 
     const cleanedIngredientGroups = newRecipeData.ingredientGroups.map(group => ({
@@ -359,14 +363,13 @@ export const RecipeProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     const recipePayload = {
       ...updatedRecipe, 
       servingsValue: Number(updatedRecipe.servingsValue),
-      servingsUnit: updatedRecipe.servingsUnit,
+      servingsUnit: updatedRecipe.servingsUnit as ServingsUnit,
       ingredientGroups: ensureIngredientGroupStructure(updatedRecipe.ingredientGroups || [], t),
       instructions: ensureInstructionStepsStructure(updatedRecipe.instructions || []).map(s => ({...s, isChecked: false})),
       tips: ensureTipStepsStructure(updatedRecipe.tips || []).map(tip => ({...tip, isChecked: false})),
-      sourceUrl: updatedRecipe.sourceUrl || null, // Store as null if empty/undefined
-      isPublic: updatedRecipe.isPublic || false,
+      sourceUrl: updatedRecipe.sourceUrl || null, 
+      isPublic: updatedRecipe.isPublic === undefined ? true : updatedRecipe.isPublic, // Default to true if undefined
       updatedAt: new Date().toISOString(),
-      // shareTokens removed
     };
     
     const cleanedIngredientGroups = recipePayload.ingredientGroups.map(group => ({
@@ -396,8 +399,11 @@ export const RecipeProvider: React.FC<{ children: ReactNode }> = ({ children }) 
 
     const currentRecipe = mapFirestoreDocToRecipe(recipeSnap.data(), recipeId);
 
-    if (!currentRecipe.isPublic && currentRecipe.createdBy !== user.uid) {
-      throw new Error(t("unauthorized_action_rate_private"));
+    // Allow rating if recipe is public OR if the user is the owner (even if private)
+    // And ensure user is authenticated
+    if (!user || (!currentRecipe.isPublic && currentRecipe.createdBy !== user.uid)) {
+        toast({ title: t("unauthorized_action_rate_private"), variant: "destructive" });
+        return;
     }
     if (rating < 0 || rating > 5) { 
       throw new Error(t("invalid_rating_value"));
@@ -433,18 +439,7 @@ export const RecipeProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   };
 
   const getRecipeById = (recipeId: string): Recipe | undefined => {
-    // Try to find in existing loaded recipes first
-    let recipe = recipes.find((r) => r.id === recipeId);
-    if (recipe) return recipe;
-    // If not found and direct URL access implies it *should* be readable (due to Firestore rules),
-    // it suggests the main query didn't pick it up (e.g., private, not owned).
-    // For this simplified model, if it's not in the main `recipes` list (which filters by public/owned),
-    // and the user has a direct URL, we might need a one-off fetch.
-    // However, the ideal scenario is that Firestore rules allow reading, and the component
-    // that needs a specific ID (like RecipeDetailPage) can trigger a specific fetch if not in context.
-    // For now, this function will only return from the context's current `recipes` state.
-    // The RecipeDetailPage will handle fetching if not found in context.
-    return undefined;
+    return recipes.find((r) => r.id === recipeId);
   };
 
   const triggerDownload = (content: string, filename: string, type: string) => {
@@ -467,6 +462,7 @@ export const RecipeProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       newTab.location.href = url;
     } else {
       console.error("Could not open new tab. Please check your popup blocker settings.");
+      toast({title: t("error_opening_new_tab_title"), description: t("error_opening_new_tab_desc"), variant: "destructive"});
     }
   };
 
@@ -495,7 +491,7 @@ export const RecipeProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   };
   
   const exportSingleRecipeAsHTML = async (recipeId: string, currentScaledServings?: number): Promise<{ success: boolean; error?: string }> => {
-    const originalRecipe = recipes.find(r => r.id === recipeId); // Use loaded recipes
+    const originalRecipe = recipes.find(r => r.id === recipeId); 
     if (!originalRecipe) return { success: false, error: t('no_recipe_to_export') };
 
     let recipeToExport = originalRecipe;
@@ -529,7 +525,7 @@ export const RecipeProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   };
 
   const exportSingleRecipeAsMarkdown = async (recipeId: string, currentScaledServings?: number): Promise<{ success: boolean; error?: string }> => {
-    const originalRecipe = recipes.find(r => r.id === recipeId); // Use loaded recipes
+    const originalRecipe = recipes.find(r => r.id === recipeId); 
     if (!originalRecipe) return { success: false, error: t('no_recipe_to_export') };
 
     let recipeToExport = originalRecipe;
@@ -575,7 +571,6 @@ export const RecipeProvider: React.FC<{ children: ReactNode }> = ({ children }) 
                                           ingredientGroups: r.ingredientGroups.map(g => ({...g, ingredients: g.ingredients.map(({fieldId, ...restI}) => restI), fieldId: undefined})).map(({fieldId, ...restG})=> restG),
                                           instructions: r.instructions.map(({fieldId, ...restS}) => ({...restS, isChecked: false})),
                                           tips: r.tips ? r.tips.map(({fieldId, ...restT}) => ({...restT, isChecked: false})) : [],
-                                          // shareTokens removed
                                         };
                                       });
     if (userRecipesToExport.length === 0) return { success: false, error: t('no_recipe_to_export') };
@@ -633,7 +628,7 @@ export const RecipeProvider: React.FC<{ children: ReactNode }> = ({ children }) 
           cookTime: recipeObj.cookTime || "",
           imageUrl: recipeObj.imageUrl || "",
           sourceUrl: recipeObj.sourceUrl || null, 
-          isPublic: recipeObj.isPublic === true, 
+          isPublic: recipeObj.isPublic === undefined ? true : recipeObj.isPublic, // Default imported recipes to public
           createdBy: user.uid, 
         };
         await addRecipe(recipeToImport); 

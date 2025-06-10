@@ -37,6 +37,8 @@
   "shopping_list": "Shopping List",
   "generate_shopping_list": "Generate Shopping List",
   "no_recipes_found": "No recipes found. Add your first recipe!",
+  "no_recipes_found_authenticated_user": "You haven't added any recipes yet, or no recipes match your current filters.",
+  "add_your_first_recipe_button": "Add Your First Recipe",
   "search_recipes": "Search recipes...",
   "search_recipes_placeholder_enhanced": "Search title, ingredients, tags...",
   "ingredient_name": "Ingredient Name",
@@ -196,6 +198,9 @@
   "no_recipes_found_for_tag": "No recipes found for tag \"{{tag}}\".",
   "make_recipe_public": "Make Recipe Public",
   "recipe_public_description": "Public recipes are visible to all users.",
+  "make_recipe_public_default_true": "Recipe Visibility",
+  "recipe_public_description_true_default": "This recipe is PUBLIC by default and visible to other logged-in users.",
+  "recipe_private_description_explicit": "This recipe is PRIVATE and only visible to you.",
   "public_recipe_indicator": "Public",
   "private_recipe_indicator": "Private",
   "data_management": "Data Management",
@@ -357,5 +362,11 @@
   "image_section_description": "Add a photo for your recipe. Drag & drop, click to upload, or provide an external URL.",
   "or_external_image_url_label": "Or provide an external image URL:",
   "external_image_url_placeholder": "https://example.com/your-image.jpg",
-  "invalid_external_image_url": "The provided URL is not a valid image URL."
+  "invalid_external_image_url": "The provided URL is not a valid image URL.",
+  "error_opening_new_tab_title": "Popup Blocker?",
+  "error_opening_new_tab_desc": "Could not open content in a new tab. Please check your browser's popup blocker settings.",
+  "welcome_to_oppskrift_title": "Welcome to Oppskrift!",
+  "welcome_to_oppskrift_desc_unapproved": "Your personal recipe book. Log in or sign up to start managing your recipes. If you've just signed up, an admin will need to approve your account before you can fully access all features.",
+  "direct_url_access_note": "Note: Recipes can be viewed via direct URL if shared.",
+  "recipes_title_authenticated": "Recipes"
 }

@@ -22,9 +22,8 @@ import { TipStepField } from "./TipStepField";
 import { useTranslation } from "@/lib/i18n";
 import { parseRecipeFromText, type ParseRecipeOutput } from "@/ai/flows/parse-recipe-from-text-flow";
 import { ocrAndParseRecipeFromImage } from "@/ai/flows/ocr-and-parse-recipe-flow";
-// Removed NextImage import as we'll use <img> for previews from data/external URLs
 import { toast } from "@/hooks/use-toast";
-import { Loader2, Eye, EyeOff, PlusCircle, Trash2, Wand2, Link as LinkIcon, FileImage, UploadCloud, XCircle, ImageUp, Sparkles, ExternalLink } from "lucide-react";
+import { Loader2, Eye, EyeOff, PlusCircle, Trash2, Wand2, FileImage, UploadCloud, XCircle, ImageUp, Sparkles, ExternalLink } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { v4 as uuidv4 } from "uuid";
 import { DragDropContext, Droppable, Draggable, type DropResult } from '@hello-pangea/dnd';
@@ -73,9 +72,9 @@ const recipeFormSchemaFactory = (t: (key: string) => string) => z.object({
   servingsUnit: z.enum(['servings', 'pieces'], { errorMap: () => ({ message: t("servings_unit_required") }) }),
   prepTime: z.string().optional(),
   cookTime: z.string().optional(),
-  imageUrl: z.string().optional(), // Can be data URI or HTTP/S URL
+  imageUrl: z.string().optional(), 
   sourceUrl: z.string().url({ message: t("invalid_url_format") }).optional().or(z.literal('')),
-  isPublic: z.boolean().default(false).optional(),
+  isPublic: z.boolean().default(true).optional(), // Default isPublic to true
 });
 
 export type RecipeFormValues = z.infer<ReturnType<typeof recipeFormSchemaFactory>>;
@@ -207,7 +206,7 @@ export function RecipeForm({ initialData, isEditMode = false }: RecipeFormProps)
               })) : []),
           imageUrl: initialData.imageUrl || "",
           sourceUrl: initialData.sourceUrl || "",
-          isPublic: initialData.isPublic || false,
+          isPublic: initialData.isPublic === undefined ? true : initialData.isPublic, // Default to true if undefined in edit mode
         }
       : {
           title: "",
@@ -223,7 +222,7 @@ export function RecipeForm({ initialData, isEditMode = false }: RecipeFormProps)
           cookTime: "",
           imageUrl: "",
           sourceUrl: "",
-          isPublic: false,
+          isPublic: true, // New recipes default to public
         },
   });
 
@@ -238,7 +237,7 @@ export function RecipeForm({ initialData, isEditMode = false }: RecipeFormProps)
     }
     if (initialData?.sourceUrl) setImportedSourceUrl(initialData.sourceUrl);
     if (initialData) {
-      form.setValue('isPublic', initialData.isPublic || false);
+      form.setValue('isPublic', initialData.isPublic === undefined ? true : initialData.isPublic); // Also default to true if undefined
       const currentInstructions = form.getValues('instructions');
       if (!Array.isArray(currentInstructions) || currentInstructions.length === 0) {
         form.setValue('instructions', [defaultInstructionStep()]);
@@ -249,6 +248,7 @@ export function RecipeForm({ initialData, isEditMode = false }: RecipeFormProps)
       }
     } else {
         form.setValue('tips', []);
+        form.setValue('isPublic', true); // Ensure new forms default to public
     }
   }, [initialData, form, t]);
 
@@ -321,10 +321,10 @@ export function RecipeForm({ initialData, isEditMode = false }: RecipeFormProps)
     try {
       toast({ title: t("image_processing_toast_title"), description: t("image_processing_toast_desc") });
       const resizedImageUri = await resizeDataUri(dataUri, MAX_IMAGE_WIDTH, IMAGE_QUALITY);
-      if (resizedImageUri.length > 1048487 * 0.95) {
+      if (resizedImageUri.length > 1048487 * 0.95) { // Firestore string field limit is ~1MB. Check if data URI is close.
         setImageError(t("image_still_too_large_error"));
         toast({ title: t("image_upload_error_title"), description: t("image_still_too_large_error"), variant: "destructive" });
-        form.setValue("imageUrl", "");
+        form.setValue("imageUrl", ""); // Clear if too large
         setImagePreview(null);
       } else {
         form.setValue("imageUrl", resizedImageUri, { shouldValidate: true, shouldDirty: true });
@@ -380,7 +380,6 @@ export function RecipeForm({ initialData, isEditMode = false }: RecipeFormProps)
   const handleExternalImageUrlBlur = () => {
     const url = externalImageUrlInput.trim();
     if (url) {
-      // Basic URL validation (starts with http/https)
       if (url.startsWith('http://') || url.startsWith('https://')) {
         try {
             new URL(url); // More robust validation
@@ -395,8 +394,8 @@ export function RecipeForm({ initialData, isEditMode = false }: RecipeFormProps)
         setImageError(t("invalid_external_image_url"));
         toast({ title: t("image_upload_error_title"), description: t("invalid_external_image_url"), variant: "destructive" });
       }
-    } else { // If input is cleared, and form has an external URL, clear it from form and preview
-        if (imagePreview && imagePreview.startsWith('http')) {
+    } else { 
+        if (imagePreview && imagePreview.startsWith('http')) { // Only clear if it was an external URL
             form.setValue("imageUrl", "");
             setImagePreview(null);
         }
@@ -438,7 +437,7 @@ export function RecipeForm({ initialData, isEditMode = false }: RecipeFormProps)
       categories: parsedData.categories || "",
       imageUrl: parsedData.extractedImageUrl || "",
       sourceUrl: parsedData.sourceUrl || "",
-      isPublic: form.getValues("isPublic")
+      isPublic: form.getValues("isPublic") // Keep existing isPublic, or default to true
     };
     form.reset(formValuesToSet);
     setImagePreview(parsedData.extractedImageUrl || null);
@@ -446,6 +445,9 @@ export function RecipeForm({ initialData, isEditMode = false }: RecipeFormProps)
         setExternalImageUrlInput(parsedData.extractedImageUrl);
     } else {
         setExternalImageUrlInput("");
+    }
+    if (formValuesToSet.isPublic === undefined) { // Ensure isPublic is set after reset
+        form.setValue('isPublic', true);
     }
   };
 
@@ -512,14 +514,15 @@ export function RecipeForm({ initialData, isEditMode = false }: RecipeFormProps)
     const validTips = (data.tips || []).filter(tip => tip.text && tip.text.trim() !== '');
     const payloadTipSteps = validTips.map(step => ({ ...step, id: step.id || uuidv4(), isChecked: false }));
     const recipePayloadBase = {
-      ...data, servingsValue: Number(data.servingsValue), servingsUnit: data.servingsUnit,
+      ...data, servingsValue: Number(data.servingsValue), servingsUnit: data.servingsUnit as ServingsUnit,
       ingredientGroups: payloadIngredientGroups, instructions: payloadInstructionSteps, tips: payloadTipSteps,
-      sourceUrl: data.sourceUrl || null, isPublic: data.isPublic || false,
+      sourceUrl: data.sourceUrl || null, 
+      isPublic: data.isPublic === undefined ? true : data.isPublic, // Ensure isPublic has a value
       tags: Array.isArray(data.tags) ? data.tags : (data.tags?.split(',').map(tag => tag.trim()).filter(tag => tag) || []),
       categories: Array.isArray(data.categories) ? data.categories : (data.categories?.split(',').map(cat => cat.trim()).filter(cat => cat) || []),
       createdBy: initialData?.createdBy || user.uid,
     };
-    delete (recipePayloadBase as any).servings;
+    delete (recipePayloadBase as any).servings; 
     try {
       if (isEditMode && initialData?.id) {
         const updatedRecipeData: Recipe = {
@@ -530,7 +533,7 @@ export function RecipeForm({ initialData, isEditMode = false }: RecipeFormProps)
         toast({ title: t('recipe_updated_successfully') }); router.push(`/recipes/${initialData.id}`);
       } else {
         const newRecipeDataForAdd = { ...recipePayloadBase } as Omit<Recipe, 'id' | 'createdAt' | 'updatedAt' | 'ratings' | 'averageRating' | 'numRatings'>;
-        const newRecipe = await addRecipe(newRecipeDataForAdd);
+        const newRecipe = await addRecipe(newRecipeDataForAdd); // addRecipe now defaults isPublic to true
         toast({ title: t('recipe_added_successfully') }); router.push(`/recipes/${newRecipe.id}`);
       }
     } catch (error) {
@@ -591,7 +594,7 @@ export function RecipeForm({ initialData, isEditMode = false }: RecipeFormProps)
                    {!ocrImageFile && !isDraggingOverOcr && <span className="text-xs text-muted-foreground/70 mt-1">({t('ocr_max_size_info', {maxSize: MAX_OCR_IMAGE_SIZE_MB})})</span>}
                 </div>
                 <Input id="ocr-image-upload" type="file" accept="image/*" onChange={handleOcrImageFileChange} className="hidden" ref={ocrFileInputRef} disabled={anyImportInProgress}/>
-                {ocrImagePreview && ( <div className="my-2"><Label>{t('ocr_image_preview_label')}</Label><img src={ocrImagePreview} alt={t('ocr_image_preview_alt')} className="rounded-md border max-h-40 w-auto object-contain" data-ai-hint="recipe image food"/></div> )}
+                {ocrImagePreview && ( <div className="my-2"><Label>{t('ocr_image_preview_label')}</Label><img src={ocrImagePreview} alt={t('ocr_image_preview_alt')} className="rounded-md border max-h-40 w-auto object-contain" data-ai-hint="recipe image"/></div> )}
                 {ocrImageFile && ( <Button type="button" onClick={handleImportFromOcr} disabled={anyImportInProgress || !ocrImageFile}> {isImportingOcr ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />} {t('ocr_import_button')} </Button> )}
                 {ocrImportError && <Alert variant="destructive"><AlertTitle>{t('ocr_import_error_title')}</AlertTitle><AlertDescription>{ocrImportError}</AlertDescription></Alert>}
             </CardContent>
@@ -773,7 +776,7 @@ export function RecipeForm({ initialData, isEditMode = false }: RecipeFormProps)
               )} />
             </div>
             <FormField control={form.control} name="isPublic" render={({ field }) => (
-              <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm"><div className="space-y-0.5"><FormLabel>{t('make_recipe_public')}</FormLabel><FormDescription>{field.value ? <Eye className="h-4 w-4 inline mr-1" /> : <EyeOff className="h-4 w-4 inline mr-1" />}{t('recipe_public_description')}</FormDescription></div><FormControl><Switch checked={field.value || false} onCheckedChange={field.onChange} /></FormControl></FormItem>
+              <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm"><div className="space-y-0.5"><FormLabel>{t('make_recipe_public_default_true')}</FormLabel><FormDescription>{field.value ? <Eye className="h-4 w-4 inline mr-1" /> : <EyeOff className="h-4 w-4 inline mr-1" />}{field.value ? t('recipe_public_description_true_default') : t('recipe_private_description_explicit')}</FormDescription></div><FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl></FormItem>
             )} />
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField control={form.control} name="prepTime" render={({ field }) => (
@@ -827,3 +830,4 @@ function NestedIngredientArray({ groupIndex, control }: NestedIngredientArrayPro
     </div>
   );
 }
+
