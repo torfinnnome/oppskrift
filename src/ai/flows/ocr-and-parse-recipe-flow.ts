@@ -33,7 +33,7 @@ const ParsedRecipeOutputSchema = z.object({
       name: z.string().optional().describe("The name of this ingredient group (e.g., 'For the dough', 'For the filling'). If the source text does not explicitly name groups, and userLanguageCode is 'no', default to 'Ingredienser'. If 'es', 'Ingredientes'. Otherwise, 'Ingredients' or leave empty."),
       ingredients: z.array(
         z.object({
-          name: z.string().describe("The name of the ingredient (e.g., 'flour', 'sugar', 'eggs'). Extract only the primary name; do NOT include translations in parentheses OR the quantity/unit text."),
+          name: z.string().describe("The name of the ingredient (e.g., 'flour', 'sugar', 'eggs'). Extract only the primary name. CRITICAL: This 'name' field MUST NOT include the quantity or unit, as those are parsed into separate 'quantity' and 'unit' fields. For example, if OCR text is '150 gr margarin', 'name' should be 'margarin'. If OCR text is structured, e.g., a column 'Ingrediensnavn' contains '100 g smør', the 'name' field is STILL 'smør'. This field MUST NOT contain numbers or units that belong in the other fields."),
           quantity: z.string().optional().describe("The quantity of the ingredient (e.g., '250', '1 1/4', 'a pinch'). Include numeric values and fractions if present."),
           unit: z.string().optional().describe("The unit for the quantity (e.g., 'g', 'ts', 'ml', 'stk').")
         })
@@ -98,6 +98,12 @@ const ocrAndParseRecipeFlow = ai.defineFlow(
         prompt: `You are an expert recipe parsing assistant. Your task is to analyze the provided text, which was extracted via OCR from an image, and structure it into a JSON object matching the provided schema.
 The user's preferred language for UI elements and recipe instructions is '{{{userLanguageCode}}}'. If an ingredient group name is not explicitly found in the text, use a default name appropriate for this language (e.g., 'Ingredienser' for 'no', 'Ingredients' for 'en', 'Ingredientes' for 'es').
 
+CRITICAL INSTRUCTIONS:
+1.  **ONLY EXTRACT FROM OCR TEXT:** Only extract information explicitly present in the provided OCR text.
+2.  **DO NOT INVENT OR MODIFY:** Do NOT invent, infer, add, or modify any information that is not directly found in the OCR text. Do not attempt to 'complete' or 'enhance' the recipe based on assumptions.
+3.  **ACCURACY IS PARAMOUNT:** Prioritize accuracy and fidelity to the OCR content above all else.
+4.  **OMIT IF NOT FOUND:** If information for a field is not present in the OCR text, omit the corresponding optional field or leave it empty according to the JSON schema. Do NOT guess or provide default values unless the schema description explicitly allows a default.
+
 Extracted OCR text:
 \`\`\`
 {{{inputText}}}
@@ -110,7 +116,7 @@ Carefully extract the following information:
     - If the recipe has named sections for ingredients, create a group for each.
     - If not, put all ingredients into a single group. Use a default group name appropriate for '{{{userLanguageCode}}}' if no specific group name is apparent (e.g., 'Ingredienser' if '{{{userLanguageCode}}}' is 'no').
     - For each ingredient:
-        - **name**: Extract *only* the actual name of the ingredient (e.g., 'margarin', 'sukker', 'hvetemel'). CRITICAL: The 'name' field must NOT include the quantity or unit, as those are parsed into separate 'quantity' and 'unit' fields. For example, if the OCR text for an ingredient line is '150 gr margarin', the 'name' should be 'margarin', 'quantity' should be '150', and 'unit' should be 'gr'.
+        - **name**: Extract *only* the actual name of the ingredient (e.g., 'margarin', 'sukker', 'hvetemel'). CRITICAL: The 'name' field must NOT include the quantity or unit, as those are parsed into separate 'quantity' and 'unit' fields. For example, if the OCR text for an ingredient line is '150 gr margarin', the 'name' should be 'margarin', 'quantity' should be '150', and 'unit' should be 'gr'. If the OCR text is structured, for example, a column labeled 'Ingrediensnavn' contains '100 g smør', the 'name' field for this ingredient is STILL 'smør'. The numbers '100' and unit 'g' must be extracted to their respective 'quantity' and 'unit' fields and completely excluded from this 'name' field.
         - Do NOT add English translations or any other language in parentheses to the 'name' field unless they were part of the original OCR text (e.g., 'epler (gjerne gule)' is okay if '(gjerne gule)' was in the OCR).
         - **quantity**: The quantity of the ingredient (e.g., '250', '1 1/4', 'a pinch').
         - **unit**: The unit for the quantity (e.g., 'g', 'ts', 'ml', 'stk').
@@ -129,7 +135,7 @@ Carefully extract the following information:
 - **categories**: Comma-separated categories.
 - **sourceUrl**: This field should be omitted or undefined as the source is an image.
 
-Prioritize accuracy. If some information is not available, omit optional fields.
+Prioritize accuracy based on the OCR text. If some information is not available, omit optional fields.
 Ensure the output strictly adheres to the JSON schema.
 The language of the output fields should generally match '{{{userLanguageCode}}}' unless the information is inherently language-neutral (like quantities) or the source text is more specific.
 

@@ -20,11 +20,12 @@ Oppskrift is a modern, web-based application designed to help you manage your pe
 *   **Shopping List:** Add ingredients from recipes to a consolidated shopping list.
 *   **Filtering & Searching:** Easily find recipes by searching titles, descriptions, ingredients, categories, or tags. Filter by visibility (public, private, community).
 *   **User Authentication:** Secure user accounts powered by Firebase Authentication (email/password). Includes profile editing (name, email, password) and a password reset flow handled by Firebase.
+*   **User Approval System:** New users require admin approval before they can create recipes or rate others' public recipes.
 *   **Persistent Storage:** Recipe data is stored securely in Firebase Firestore.
 *   **Import/Export:** Users can export their recipes to a JSON file and import recipes from a JSON file. HTML and Markdown export for individual and all user recipes.
 *   **Internationalization (i18n):** Supports multiple languages (English, Norwegian, Spanish).
 *   **Responsive Design:** Built with ShadCN UI components and Tailwind CSS for a clean experience on all devices.
-*   **Admin Functionality:** A designated admin user (defined by email in `.env.local` and UID in Firestore rules) can delete any recipe in the system.
+*   **Admin Functionality:** A designated admin user (defined by email in `.env.local` and UID in Firestore rules) can delete any recipe in the system and approve new users.
 
 ## Tech Stack
 
@@ -91,40 +92,87 @@ service cloud.firestore {
       return request.auth.uid == "YOUR_ADMIN_USER_UID_HERE";
     }
 
+    // Function to check if a user is approved
+    function isUserApproved(userId) {
+      return exists(/databases/$(database)/documents/users/$(userId)) &&
+             get(/databases/$(database)/documents/users/$(userId)).data.isApproved == true;
+    }
+
+    match /users/{userId} {
+      // User can read their own data, admin can read any user's data
+      allow read: if request.auth.uid == userId || isAdmin();
+      
+      // User can create their own document on signup
+      allow create: if request.auth.uid == userId &&
+                      request.resource.data.uid == request.auth.uid &&
+                      request.resource.data.email == request.auth.token.email &&
+                      request.resource.data.isApproved == false &&
+                      request.resource.data.roles[0] == 'user' &&
+                      // Assuming client sends createdAt as a string (ISO date) or server timestamp
+                      (request.resource.data.createdAt is string || request.resource.data.createdAt is timestamp); 
+      
+      // Admin can update specific fields like isApproved, roles, and updatedAt
+      // User can update their own displayName, email (if also providing password - handled client side), updatedAt
+      allow update: if (isAdmin() &&
+                       request.resource.data.diff(resource.data).affectedKeys().hasAny(['isApproved', 'roles', 'updatedAt']) &&
+                       (request.resource.data.updatedAt is string || request.resource.data.updatedAt == null || request.resource.data.updatedAt is timestamp)
+                      ) ||
+                      (request.auth.uid == userId &&
+                       request.resource.data.diff(resource.data).affectedKeys().hasOnly(['displayName', 'email', 'updatedAt']) &&
+                       (request.resource.data.updatedAt is string || request.resource.data.updatedAt == null || request.resource.data.updatedAt is timestamp)
+                      );
+
+      // Admin can delete user documents if needed (optional)
+      allow delete: if isAdmin();
+    }
+
     match /recipes/{recipeId} {
       // Public recipes are readable by ANYONE (even unauthenticated users).
       // Authenticated users can also read their own private recipes.
       allow read: if resource.data.isPublic == true || (request.auth != null && resource.data.createdBy == request.auth.uid);
       
-      // Users can only create recipes for themselves.
+      // Users can only create recipes for themselves IF THEY ARE APPROVED.
       // Ensure required fields for new recipes are present.
       allow create: if request.auth != null && 
                       request.resource.data.createdBy == request.auth.uid &&
+                      isUserApproved(request.auth.uid) && // CHECK: User must be approved
                       request.resource.data.title is string &&
                       request.resource.data.ingredientGroups is list &&
                       request.resource.data.instructions is list &&
                       request.resource.data.servingsValue is number &&
                       request.resource.data.servingsUnit is string &&
-                      request.resource.data.createdAt is string &&
-                      request.resource.data.updatedAt is string;
+                      (request.resource.data.createdAt is string || request.resource.data.createdAt is timestamp) && 
+                      (request.resource.data.updatedAt is string || request.resource.data.updatedAt is timestamp);
       
       // For updates:
-      // - Owner can update any field of their own recipe.
-      // - Any authenticated user can update ONLY rating-related fields.
-      //   The client is responsible for calculating and sending correct aggregate rating values.
       allow update: if request.auth != null &&
                     (
-                      // Owner updates (can change anything, except createdBy and createdAt)
-                      (resource.data.createdBy == request.auth.uid &&
-                       !(request.resource.data.diff(resource.data).affectedKeys().hasAny(['createdBy', 'createdAt']))
-                      ) ||
-                      // Non-owner rating updates (can only change rating fields)
+                      // Case 1: Owner updates (includes rating their own recipe)
                       (
-                        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['ratings', 'averageRating', 'numRatings', 'updatedAt']) &&
-                        // Ensure they are actually setting/changing their own vote in the ratings map
-                        (request.resource.data.ratings[request.auth.uid] != null &&
-                         (resource.data.ratings == null || resource.data.ratings[request.auth.uid] != request.resource.data.ratings[request.auth.uid])
+                        resource.data.createdBy == request.auth.uid &&
+                        // Cannot change createdBy or createdAt
+                        !(request.resource.data.diff(resource.data).affectedKeys().hasAny(['createdBy', 'createdAt'])) &&
+                        // Ensure updatedAt is an ISO string (matching client behavior) or null
+                        (request.resource.data.updatedAt is string || request.resource.data.updatedAt == null || request.resource.data.updatedAt is timestamp) &&
+                        (
+                          // Approved owner can change anything (except system fields mentioned above)
+                          isUserApproved(request.auth.uid) ||
+                          // OR Unapproved owner can ONLY change rating-related fields on their own recipe
+                          (
+                            !isUserApproved(request.auth.uid) &&
+                            request.resource.data.diff(resource.data).affectedKeys().hasOnly(['ratings', 'averageRating', 'numRatings', 'updatedAt'])
+                          )
                         )
+                      ) ||
+                      // Case 2: Non-owner (must be approved) rates a public recipe (SIMPLIFIED LOGIC)
+                      (
+                        resource.data.createdBy != request.auth.uid &&    // Not the owner
+                        isUserApproved(request.auth.uid) &&                // Rater must be approved
+                        resource.data.isPublic == true &&                  // Recipe must be public
+                        // Can only change rating-related fields
+                        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['ratings', 'averageRating', 'numRatings', 'updatedAt']) &&
+                        // Ensure updatedAt is an ISO string or null
+                        (request.resource.data.updatedAt is string || request.resource.data.updatedAt == null || request.resource.data.updatedAt is timestamp)
                       )
                     );
       
@@ -141,3 +189,6 @@ service cloud.firestore {
 **Remember to replace `"YOUR_ADMIN_USER_UID_HERE"` in the Firestore rules with the actual Firebase UID of your designated admin user.** You can find the UID in the Firebase console under Authentication -> Users tab.
 
 This project was initialized and developed in Firebase Studio.
+
+
+    

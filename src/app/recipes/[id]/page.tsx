@@ -385,6 +385,10 @@ function RecipeDetailPageContent() {
   const displayServingsUnit = recipe.servingsUnit === 'pieces' ? t('servings_unit_pieces') : t('servings_unit_servings');
   const canVoteOnRecipe = user && (recipe.isPublic || recipe.createdBy === user.uid);
   const currentUserRating = user ? recipe.ratings?.[user.uid] || 0 : 0;
+  
+  const communityAverageRating = recipe.averageRating || 0;
+  const communityNumRatings = recipe.numRatings || 0;
+
 
   return (
     <div className="max-w-4xl mx-auto">
@@ -431,18 +435,18 @@ function RecipeDetailPageContent() {
             <Label className="text-base font-medium">{canVoteOnRecipe ? t('your_rating') : t('average_rating_label')}:</Label>
             <div className="flex items-center gap-2">
               <StarRating
-                rating={currentUserRating || recipe.averageRating || 0}
+                rating={canVoteOnRecipe ? (currentUserRating || 0) : communityAverageRating}
                 onRate={canVoteOnRecipe ? handleRateRecipe : undefined}
                 interactive={canVoteOnRecipe}
                 size={24}
                 showTooltip={canVoteOnRecipe}
               />
-              {(recipe.numRatings || 0) > 0 && (
+              {(communityNumRatings > 0) && (
                 <span className="text-sm text-muted-foreground">
-                  ({recipe.averageRating?.toFixed(1)} {t('stars_short')} / {recipe.numRatings} {recipe.numRatings === 1 ? t('vote_singular') : t('votes_plural')})
+                  ({communityAverageRating.toFixed(1)} {t('stars_short')} / {communityNumRatings} {communityNumRatings === 1 ? t('vote_singular') : t('votes_plural')})
                 </span>
               )}
-               {!canVoteOnRecipe && user && (recipe.numRatings || 0) === 0 && recipe.isPublic && (
+               {!canVoteOnRecipe && user && communityNumRatings === 0 && recipe.isPublic && (
                 <span className="text-sm text-muted-foreground">{t('be_the_first_to_rate')}</span>
               )}
             </div>
@@ -569,3 +573,4 @@ export default function RecipeDetailPage() {
     </Suspense>
   );
 }
+
