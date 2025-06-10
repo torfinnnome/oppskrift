@@ -2,9 +2,9 @@
 "use client";
 
 import { useState, useEffect, useMemo, useRef, useCallback, Suspense } from "react";
-import { useParams, useRouter } from "next/navigation"; // Removed useSearchParams
+import { useParams, useRouter } from "next/navigation"; 
 import { useRecipes } from "@/contexts/RecipeContext";
-import type { Recipe as RecipeType, IngredientGroup as IngredientGroupType } from "@/types"; // Removed ShareToken
+import type { Recipe as RecipeType, Ingredient as IngredientType, IngredientGroup as IngredientGroupType, InstructionStep as InstructionStepType, TipStep as TipStepType, ServingsUnit } from "@/types"; 
 import { useAuth } from "@/contexts/AuthContext";
 import { useShoppingList } from "@/contexts/ShoppingListContext";
 import { useTranslation } from "@/lib/i18n";
@@ -16,7 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Clock, Users, Tag, Bookmark, Edit, Trash2, ShoppingCart, Minus, Plus, ArrowLeft, Globe, EyeOff, FileText, FileCode, Loader2, Download, Smartphone, Info, Lightbulb, Utensils, Star as StarIcon, Link as LinkIcon } from "lucide-react"; // Removed Share2, Copy
+import { Clock, Users, Tag, Bookmark, Edit, Trash2, ShoppingCart, Minus, Plus, ArrowLeft, Globe, EyeOff, FileText, FileCode, Loader2, Download, Smartphone, Info, Lightbulb, Utensils, Star as StarIcon, Link as LinkIcon } from "lucide-react"; 
 import Link from "next/link";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
@@ -25,22 +25,119 @@ import { StarRating } from "@/components/recipe/StarRating";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-// Dialog imports might not be needed if share dialog is removed
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
-// Removed uuid and date-fns imports
+import { db } from "@/firebase";
+import { doc, getDoc } from "firebase/firestore";
+import { v4 as uuidv4 } from "uuid";
 
 interface ScaledIngredientGroup extends Omit<IngredientGroupType, 'ingredients'> {
   ingredients: { name: string; quantity: string; unit: string; id: string; }[];
 }
 
+// Helper functions for mapping Firestore data, similar to those in RecipeContext
+// These are needed here for the direct fetch fallback.
+const ensureIngredientStructureOnPage = (ingredients: Partial<IngredientType>[]): IngredientType[] => {
+  return ingredients.map(ing => ({
+    id: ing.id || uuidv4(),
+    fieldId: ing.fieldId || uuidv4(),
+    name: ing.name || '',
+    quantity: ing.quantity || '',
+    unit: ing.unit || ''
+  })) as IngredientType[];
+};
+
+const ensureIngredientGroupStructureOnPage = (groups: Partial<IngredientGroupType>[], t: (key: string) => string): IngredientGroupType[] => {
+  if (!groups || groups.length === 0) {
+    return [{
+      id: uuidv4(),
+      fieldId: uuidv4(),
+      name: t('default_ingredient_group_name'),
+      ingredients: []
+    }];
+  }
+  return groups.map(group => ({
+    id: group.id || uuidv4(),
+    fieldId: group.fieldId || uuidv4(),
+    name: group.name || "",
+    ingredients: ensureIngredientStructureOnPage(group.ingredients || [])
+  })) as IngredientGroupType[];
+};
+
+const ensureInstructionStepsStructureOnPage = (stepsData: any): InstructionStepType[] => {
+  if (typeof stepsData === 'string') {
+    return stepsData.split('\n').filter(line => line.trim() !== '').map(line => ({
+      id: uuidv4(),
+      fieldId: uuidv4(),
+      text: line,
+      isChecked: false,
+    }));
+  }
+  if (Array.isArray(stepsData)) {
+    return stepsData.map((step: any) => ({
+      id: step.id || uuidv4(),
+      fieldId: step.fieldId || uuidv4(),
+      text: step.text || '',
+      isChecked: step.isChecked || false,
+    }));
+  }
+  return [{ id: uuidv4(), fieldId: uuidv4(), text: '', isChecked: false }];
+};
+
+const ensureTipStepsStructureOnPage = (stepsData: any): TipStepType[] => {
+  if (typeof stepsData === 'string') {
+    return stepsData.split('\n').filter(line => line.trim() !== '').map(line => ({
+      id: uuidv4(),
+      fieldId: uuidv4(),
+      text: line,
+      isChecked: false,
+    }));
+  }
+  if (Array.isArray(stepsData)) {
+    return stepsData.map((step: any) => ({
+      id: step.id || uuidv4(),
+      fieldId: step.fieldId || uuidv4(),
+      text: step.text || '',
+      isChecked: step.isChecked || false,
+    }));
+  }
+  return [];
+};
+
+const mapFetchedDocToRecipe = (docData: any, docId: string, t: (key: string) => string): RecipeType => {
+    const ingredientGroupsData = ensureIngredientGroupStructureOnPage(docData.ingredientGroups || (docData.ingredients ? [{ name: t('default_ingredient_group_name'), ingredients: docData.ingredients }] : []), t);
+    const instructionSteps = ensureInstructionStepsStructureOnPage(docData.instructions);
+    const tipSteps = ensureTipStepsStructureOnPage(docData.tips);
+    const servingsValue = docData.servingsValue !== undefined ? docData.servingsValue : (docData.servings !== undefined ? Number(docData.servings) : 1);
+    const servingsUnit = docData.servingsUnit || 'servings' as ServingsUnit;
+
+    return {
+      id: docId,
+      ...docData,
+      servingsValue,
+      servingsUnit,
+      ingredientGroups: ingredientGroupsData,
+      instructions: instructionSteps,
+      tips: tipSteps,
+      sourceUrl: docData.sourceUrl === null ? undefined : docData.sourceUrl,
+      tags: Array.isArray(docData.tags) ? docData.tags : [],
+      categories: Array.isArray(docData.categories) ? docData.categories : [],
+      createdAt: docData.createdAt || new Date().toISOString(),
+      updatedAt: docData.updatedAt || new Date().toISOString(),
+      ratings: docData.ratings || {},
+      averageRating: docData.averageRating || 0,
+      numRatings: docData.numRatings || 0,
+    } as RecipeType;
+};
+
+
 const linkifyText = (text: string): React.ReactNode[] => {
   if (!text) return [];
   const urlRegex = /(https?:\/\/[^\s]+)/g;
-  const parts = text.split(urlRegex); 
+  const parts = text.split(urlRegex);
 
   return parts.map((part, index) => {
     if (part.match(urlRegex)) {
@@ -56,7 +153,7 @@ const linkifyText = (text: string): React.ReactNode[] => {
         </a>
       );
     }
-    return part; 
+    return part;
   });
 };
 
@@ -72,8 +169,8 @@ function RecipeDetailPageContent() {
 
   const [recipe, setRecipe] = useState<RecipeType | null | undefined>(undefined);
   const [isLoadingRecipe, setIsLoadingRecipe] = useState(true);
-  
-  const [numServings, setNumServings] = useState(1); 
+
+  const [numServings, setNumServings] = useState(1);
   const [isExportingHtml, setIsExportingHtml] = useState(false);
   const [isExportingMarkdown, setIsExportingMarkdown] = useState(false);
   const [keepScreenOn, setKeepScreenOn] = useState(false);
@@ -89,45 +186,38 @@ function RecipeDetailPageContent() {
       return;
     }
     setIsLoadingRecipe(true);
-    
-    // Attempt to get recipe from context first
+
     let foundRecipe = getRecipeById(recipeId);
 
     if (foundRecipe) {
       setRecipe(foundRecipe);
-    } else {
-      // If not in context, try a direct fetch (assuming Firestore rules allow it)
-      // This covers cases where user navigates directly to a URL of a recipe
-      // not initially loaded by their main context query (e.g., another user's public recipe not yet in cache)
+      setIsLoadingRecipe(false);
+    } else if (!recipesLoadingFromContext) { // Only try direct fetch if context is done loading and recipe not found
       try {
         const recipeDocRef = doc(db, "recipes", recipeId);
         const docSnap = await getDoc(recipeDocRef);
         if (docSnap.exists()) {
-           // Manually map here if needed, or ensure getRecipeById can handle a raw doc
-           // For simplicity, assuming getRecipeById from context is the primary way and rules allow reads
-           // This part is more complex if mapFirestoreDocToRecipe isn't exposed or if context doesn't update from this fetch
-           // For now, let's rely on context + Firestore rules. If getRecipeById fails, it means not found or not permitted by rules.
-           // The new model is that context tries to load everything accessible by rules.
-           // If it's still not in getRecipeById, it means it doesn't exist or rules blocked it.
-           // To truly fulfill "any recipe by URL", the context's main query needs to be very broad OR
-           // a direct fetch + mapping like in the previous version's 'fetchRecipeByIdDirectly' is needed here.
-           // Given RecipeContext was simplified, we assume if it's not in `recipes` array from context, it's "not found".
-           setRecipe(null); // Recipe not found via context after attempting to load all accessible recipes
+          const fetchedRecipe = mapFetchedDocToRecipe(docSnap.data(), docSnap.id, t);
+          setRecipe(fetchedRecipe);
         } else {
-          setRecipe(null);
+          setRecipe(null); // Recipe truly not found
         }
       } catch (err) {
         console.error("Error directly fetching recipe:", err);
         setRecipe(null);
+      } finally {
+        setIsLoadingRecipe(false);
       }
+    } else {
+      // Context is still loading, wait for it to finish.
+      // isLoadingRecipe remains true.
     }
-    setIsLoadingRecipe(false);
-  }, [recipeId, getRecipeById ]); // Removed fetchRecipeByIdDirectly as it's no longer in context type
+  }, [recipeId, getRecipeById, recipesLoadingFromContext, t]);
 
 
   useEffect(() => {
     loadRecipe();
-  }, [loadRecipe, recipesLoadingFromContext]); 
+  }, [loadRecipe]); // loadRecipe is stable due to useCallback and its dependencies
 
   useEffect(() => {
     if (recipe) {
@@ -236,7 +326,6 @@ function RecipeDetailPageContent() {
       toast({ title: t('must_be_logged_in_to_rate'), variant: "destructive" });
       return;
     }
-    // Rating logic remains: users can rate public recipes, or their own private recipes.
     if (!recipe.isPublic && recipe.createdBy !== user.uid) {
         toast({ title: t('unauthorized_action_rate_private'), variant: "destructive" });
         return;
@@ -249,17 +338,16 @@ function RecipeDetailPageContent() {
     }
   };
 
-  // Removed share link generation and dialog logic
 
-  if (isLoadingRecipe || authLoading || recipesLoadingFromContext) {
+  if (isLoadingRecipe || authLoading || recipesLoadingFromContext && recipe === undefined) {
     return <div className="max-w-3xl mx-auto space-y-6"> <Skeleton className="h-12 w-3/4" /> <Skeleton className="h-64 w-full rounded-lg" /> <div className="grid md:grid-cols-3 gap-6"> <div className="md:col-span-1 space-y-4"><Skeleton className="h-8 w-full" /><Skeleton className="h-32 w-full" /></div> <div className="md:col-span-2 space-y-4"><Skeleton className="h-8 w-1/2" /><Skeleton className="h-48 w-full" /></div> </div> </div>;
   }
-  if (!recipe) return <div className="text-center py-10 text-xl text-muted-foreground">{t('recipe_not_found')}</div>; // Simplified message
+  if (!recipe) return <div className="text-center py-10 text-xl text-muted-foreground">{t('recipe_not_found')}</div>;
 
   const canEdit = user && recipe.createdBy === user.uid;
   const canDelete = (user && recipe.createdBy === user.uid) || isAdmin;
   const anyExportInProgress = isExportingHtml || isExportingMarkdown;
-  
+
   const displayServingsUnit = recipe.servingsUnit === 'pieces' ? t('servings_unit_pieces') : t('servings_unit_servings');
   const canVoteOnRecipe = user && (recipe.isPublic || recipe.createdBy === user.uid);
   const currentUserRating = user ? recipe.ratings?.[user.uid] || 0 : 0;
@@ -267,7 +355,7 @@ function RecipeDetailPageContent() {
   return (
     <div className="max-w-4xl mx-auto">
       <Button variant="ghost" onClick={() => router.back()} className="mb-4"><ArrowLeft className="mr-2 h-4 w-4" /> {t('back_to_recipes')}</Button>
-      
+
       <Card className="overflow-hidden shadow-xl">
         {recipe.imageUrl && (
           <div className="relative w-full h-64 md:h-96">
@@ -283,7 +371,6 @@ function RecipeDetailPageContent() {
             <div className="flex gap-2 flex-shrink-0 items-center">
               <TooltipProvider><Tooltip><TooltipTrigger asChild><div className="flex items-center space-x-2"><Switch id="keep-screen-on" checked={keepScreenOn} onCheckedChange={setKeepScreenOn} aria-label={t('keep_screen_on_label')} /><Label htmlFor="keep-screen-on" className="text-sm text-muted-foreground flex items-center"><Smartphone className="mr-1 h-4 w-4" />{t('keep_screen_on_label_short')}<Info className="ml-1 h-3 w-3 cursor-help" /></Label></div></TooltipTrigger><TooltipContent><p>{t('keep_screen_on_tooltip')}</p></TooltipContent></Tooltip></TooltipProvider>
               <DropdownMenu><DropdownMenuTrigger asChild><Button variant="outline" size="icon" aria-label={t('export_recipe')} disabled={anyExportInProgress}>{anyExportInProgress ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}</Button></DropdownMenuTrigger><DropdownMenuContent align="end"><DropdownMenuItem onClick={handleExportHTML} disabled={isExportingHtml}><FileCode className="mr-2 h-4 w-4" />{t('export_as_html_item')}</DropdownMenuItem><DropdownMenuItem onClick={handleExportMarkdown} disabled={isExportingMarkdown}><FileText className="mr-2 h-4 w-4" />{t('export_as_markdown_item')}</DropdownMenuItem></DropdownMenuContent></DropdownMenu>
-              {/* Share button removed */}
               {canEdit && <Button variant="outline" size="icon" asChild><Link href={`/recipes/${recipe.id}/edit`} aria-label={t('edit_recipe')}><Edit className="h-4 w-4" /></Link></Button>}
               {canDelete && <AlertDialog><AlertDialogTrigger asChild><Button variant="destructive" size="icon" aria-label={t('delete_recipe')}><Trash2 className="h-4 w-4" /></Button></AlertDialogTrigger><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>{t('confirm_delete_recipe')}</AlertDialogTitle><AlertDialogDescription>{t('this_action_cannot_be_undone')}</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>{t('cancel')}</AlertDialogCancel><AlertDialogAction onClick={handleDeleteRecipe}>{t('delete')}</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>}
             </div>
@@ -364,7 +451,7 @@ function RecipeDetailPageContent() {
                           aria-label={t('toggle_step_completion_aria', { stepNumber: index + 1 })}
                           className="mt-1 shrink-0"
                         />
-                      <label 
+                      <label
                         htmlFor={`instruction-step-${step.id}`}
                         className={cn(
                           "flex-grow prose prose-sm sm:prose-base max-w-none text-foreground whitespace-pre-line cursor-pointer",
@@ -381,7 +468,7 @@ function RecipeDetailPageContent() {
               )}
             </div>
           </div>
-          
+
           {recipe.tips && recipe.tips.length > 0 && (
             <>
               <Separator />
@@ -423,7 +510,6 @@ function RecipeDetailPageContent() {
           </div>
         </CardContent>
       </Card>
-      {/* Share link Dialog removed */}
     </div>
   );
 }
