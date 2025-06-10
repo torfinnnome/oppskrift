@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { siteConfig } from "@/config/site";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { useTranslation } from "@/lib/i18n";
-import { Home, LogIn, LogOut, PlusCircle, UserPlus, UserCircle, Settings, ShoppingCart } from "lucide-react";
+import { Home, LogIn, LogOut, PlusCircle, UserPlus, UserCircle, Settings, ShoppingCart, UserCog } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 export function Header() {
-  const { user, logOut, loading } = useAuth(); // Changed logout to logOut
+  const { user, logOut, loading, isAdmin, isUserApproved } = useAuth();
   const { t } = useTranslation();
 
   const avatarName = user?.displayName || user?.email || "User";
@@ -47,9 +47,11 @@ export function Header() {
                 <Button variant="ghost" asChild>
                   <Link href="/">{t('my_recipes')}</Link>
                 </Button>
-                <Button variant="ghost" asChild>
-                  <Link href="/recipes/new">{t('add_recipe')}</Link>
-                </Button>
+                {isUserApproved && (
+                  <Button variant="ghost" asChild>
+                    <Link href="/recipes/new">{t('add_recipe')}</Link>
+                  </Button>
+                )}
                 <Button variant="ghost" asChild>
                   <Link href="/shopping-list">{t('shopping_list')}</Link>
                 </Button>
@@ -64,8 +66,6 @@ export function Header() {
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="relative h-8 w-8 rounded-full">
                   <Avatar className="h-8 w-8">
-                    {/* Firebase doesn't provide a default photoURL like Vercel's avatar service */}
-                    {/* So we rely on displayName for the fallback text */}
                     <AvatarFallback>{avatarFallback}</AvatarFallback>
                   </Avatar>
                 </Button>
@@ -87,6 +87,11 @@ export function Header() {
                 <DropdownMenuItem asChild>
                    <Link href="/settings"><Settings className="mr-2 h-4 w-4" /> {t('settings')}</Link>
                 </DropdownMenuItem>
+                {isAdmin && (
+                  <DropdownMenuItem asChild>
+                    <Link href="/admin/users"><UserCog className="mr-2 h-4 w-4" /> {t('admin_manage_users_link')}</Link>
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={logOut}>
                   <LogOut className="mr-2 h-4 w-4" /> {t('logout')}

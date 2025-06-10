@@ -19,7 +19,9 @@ import {
   or,
   getDoc,
   Timestamp, 
+  writeBatch,
 } from "firebase/firestore";
+import { toast } from "@/hooks/use-toast"; // Added toast import
 
 interface RecipeContextType {
   recipes: Recipe[];
@@ -222,7 +224,7 @@ const formatRecipeToMarkdown = (recipe: Recipe, t: (key: string, params?:any) =>
 export const RecipeProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [loading, setLoading] = useState(true);
-  const { user, isAdmin } = useAuth(); 
+  const { user, isAdmin, isUserApproved } = useAuth(); 
   const { t } = useTranslation(); 
 
   const mapFirestoreDocToRecipe = useCallback((docData: any, docId: string): Recipe => {
@@ -263,7 +265,7 @@ export const RecipeProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       sourceUrl: docData.sourceUrl === null ? undefined : docData.sourceUrl, 
       tags: Array.isArray(docData.tags) ? docData.tags : [],
       categories: Array.isArray(docData.categories) ? docData.categories : [],
-      isPublic: docData.isPublic === undefined ? true : docData.isPublic, // Default to true if undefined
+      isPublic: docData.isPublic === undefined ? true : docData.isPublic, // Default to true
       createdAt: docData.createdAt || new Date().toISOString(),
       updatedAt: docData.updatedAt || new Date().toISOString(),
       ratings: docData.ratings || {},
@@ -282,45 +284,41 @@ export const RecipeProvider: React.FC<{ children: ReactNode }> = ({ children }) 
 
     setLoading(true);
     const recipesCollectionRef = collection(db, "recipes");
-    let q;
+    let unsubscribe = () => {}; // Initialize unsubscribe to a no-op function
 
-    if (user && user.uid) {
-      // Logged-in users see their own recipes (public or private) AND all other public recipes
-      q = query(recipesCollectionRef, 
+    if (user && isUserApproved) { // Logged in AND Approved: Fetch user's recipes + all public
+      const q = query(recipesCollectionRef, 
         or(
           where("createdBy", "==", user.uid), 
           where("isPublic", "==", true)
         )
       );
-    } else {
-      // Unauthenticated users see NO recipes listed by default.
-      // The page.tsx will handle not showing any list.
-      // This context will still fetch public recipes in the background for direct URL access,
-      // or if rules allow broader reads.
-      // For the "no recipes listed by default" goal, the UI on page.tsx is key.
-      // If we strictly want this context to fetch nothing for logged-out list views,
-      // we would need a condition here to not even set up the listener or use a query
-      // that yields no results, but that might interfere with direct URL access functionality.
-      // So, keep fetching public recipes, UI will hide them from main list.
-      q = query(recipesCollectionRef, where("isPublic", "==", true));
-    }
-    
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const fetchedRecipes = snapshot.docs.map(doc => mapFirestoreDocToRecipe(doc.data(), doc.id));
-      setRecipes(fetchedRecipes);
-      setLoading(false);
-    }, (error) => {
-      console.error("[RecipeContext] Error fetching recipes:", error);
+      unsubscribe = onSnapshot(q, (snapshot) => {
+        const fetchedRecipes = snapshot.docs.map(doc => mapFirestoreDocToRecipe(doc.data(), doc.id));
+        setRecipes(fetchedRecipes);
+        setLoading(false);
+      }, (error) => {
+        console.error("[RecipeContext] Error fetching recipes for approved user:", error);
+        setRecipes([]); // Set to empty on error
+        setLoading(false);
+      });
+    } else { // Not logged in OR Logged in but NOT Approved: No recipes listed
       setRecipes([]);
       setLoading(false);
-    });
-
-    return () => unsubscribe();
-  }, [user, mapFirestoreDocToRecipe]); 
+      // No Firestore listener needed for general listing if they can't see any.
+      // Direct URL access is handled by RecipeDetailPage.
+    }
+    
+    return () => unsubscribe(); // Cleanup subscription
+  }, [user, isUserApproved, mapFirestoreDocToRecipe]); // Added isUserApproved to dependencies
 
 
   const addRecipe = async (recipeData: Omit<Recipe, "id" | "createdAt" | "updatedAt" | "ratings" | "averageRating" | "numRatings">): Promise<Recipe> => {
     if (!user || !db) throw new Error(t("user_not_authenticated_or_firestore_not_initialized"));
+    if (!isUserApproved) {
+        toast({title: t('error_generic_title'), description: t('user_not_approved_cannot_create_recipe'), variant: "destructive"});
+        throw new Error(t("user_not_approved_cannot_create_recipe"));
+    }
     
     const newRecipeData = {
       ...recipeData,
@@ -357,6 +355,12 @@ export const RecipeProvider: React.FC<{ children: ReactNode }> = ({ children }) 
 
   const updateRecipe = async (updatedRecipe: Recipe): Promise<void> => {
     if (!user || !db) throw new Error(t("user_not_authenticated_or_firestore_not_initialized"));
+    if (!isUserApproved && updatedRecipe.createdBy === user.uid) {
+        // If user owns it but is not approved, still block update for consistency with create
+        toast({title: t('error_generic_title'), description: t('user_not_approved_cannot_edit_recipe'), variant: "destructive"});
+        throw new Error(t("user_not_approved_cannot_edit_recipe"));
+    }
+
 
     const recipeDocRef = doc(db, "recipes", updatedRecipe.id);
     
@@ -368,7 +372,7 @@ export const RecipeProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       instructions: ensureInstructionStepsStructure(updatedRecipe.instructions || []).map(s => ({...s, isChecked: false})),
       tips: ensureTipStepsStructure(updatedRecipe.tips || []).map(tip => ({...tip, isChecked: false})),
       sourceUrl: updatedRecipe.sourceUrl || null, 
-      isPublic: updatedRecipe.isPublic === undefined ? true : updatedRecipe.isPublic, // Default to true if undefined
+      isPublic: updatedRecipe.isPublic === undefined ? true : updatedRecipe.isPublic,
       updatedAt: new Date().toISOString(),
     };
     
@@ -399,8 +403,6 @@ export const RecipeProvider: React.FC<{ children: ReactNode }> = ({ children }) 
 
     const currentRecipe = mapFirestoreDocToRecipe(recipeSnap.data(), recipeId);
 
-    // Allow rating if recipe is public OR if the user is the owner (even if private)
-    // And ensure user is authenticated
     if (!user || (!currentRecipe.isPublic && currentRecipe.createdBy !== user.uid)) {
         toast({ title: t("unauthorized_action_rate_private"), variant: "destructive" });
         return;
@@ -583,59 +585,81 @@ export const RecipeProvider: React.FC<{ children: ReactNode }> = ({ children }) 
 
   const importRecipes = async (jsonString: string): Promise<{ success: boolean; count: number; error?: string }> => {
     if (!user) return { success: false, count: 0, error: t("must_be_logged_in") };
+    if (!isUserApproved) {
+        toast({title: t('error_generic_title'), description: t('user_not_approved_cannot_import_recipes'), variant: "destructive"});
+        return { success: false, count: 0, error: t("user_not_approved_cannot_import_recipes") };
+    }
+
+    let importedRecipeObjects: any[];
     try {
-      const importedRecipeObjects = JSON.parse(jsonString);
-      if (!Array.isArray(importedRecipeObjects)) return { success: false, count: 0, error: t("invalid_json_file_format") };
-      let importedCount = 0;
-      for (const recipeObj of importedRecipeObjects) {
-        if (!recipeObj.title) { console.warn("Skipping invalid recipe object during import (missing title):", recipeObj); continue; }
-        
-        let ingredientGroupsToImport: IngredientGroup[];
-        if (recipeObj.ingredientGroups && Array.isArray(recipeObj.ingredientGroups)) {
-            ingredientGroupsToImport = recipeObj.ingredientGroups.map((group: any) => ({
-                id: group.id || uuidv4(),
-                name: group.name || "",
-                ingredients: ensureIngredientStructure(group.ingredients || [])
-            }));
-        } else if (recipeObj.ingredients && Array.isArray(recipeObj.ingredients)) { 
-            ingredientGroupsToImport = [{
-                id: uuidv4(),
-                name: t('default_ingredient_group_name'),
-                ingredients: ensureIngredientStructure(recipeObj.ingredients)
-            }];
-        } else {
-            ingredientGroupsToImport = [ensureIngredientGroupStructure([], t)[0]];
-        }
+      importedRecipeObjects = JSON.parse(jsonString);
+    } catch (parseError) {
+      return { success: false, count: 0, error: t("invalid_json_file_format") };
+    }
 
-        const instructionsToImport = ensureInstructionStepsStructure(recipeObj.instructions || [{id: uuidv4(), text: recipeObj.instructions || "", isChecked: false}]);
-        const tipsToImport = ensureTipStepsStructure(recipeObj.tips || []);
+    if (!Array.isArray(importedRecipeObjects)) return { success: false, count: 0, error: t("invalid_json_file_format") };
+    
+    let importedCount = 0;
+    const batch = writeBatch(db);
 
-        const servingsValue = recipeObj.servingsValue !== undefined ? Number(recipeObj.servingsValue) : (recipeObj.servings !== undefined ? Number(recipeObj.servings) : 1);
-        const servingsUnit = recipeObj.servingsUnit || 'servings' as ServingsUnit;
-
-
-        const recipeToImport: Omit<Recipe, "id" | "createdAt" | "updatedAt" | "ratings" | "averageRating" | "numRatings"> = {
-          title: recipeObj.title,
-          description: recipeObj.description || "",
-          ingredientGroups: ingredientGroupsToImport,
-          instructions: instructionsToImport.map(s => ({...s, isChecked: false})), 
-          tips: tipsToImport.map(t => ({...t, isChecked: false})), 
-          tags: Array.isArray(recipeObj.tags) ? recipeObj.tags.map(String) : [],
-          categories: Array.isArray(recipeObj.categories) ? recipeObj.categories.map(String) : [],
-          servingsValue,
-          servingsUnit,
-          prepTime: recipeObj.prepTime || "",
-          cookTime: recipeObj.cookTime || "",
-          imageUrl: recipeObj.imageUrl || "",
-          sourceUrl: recipeObj.sourceUrl || null, 
-          isPublic: recipeObj.isPublic === undefined ? true : recipeObj.isPublic, // Default imported recipes to public
-          createdBy: user.uid, 
-        };
-        await addRecipe(recipeToImport); 
-        importedCount++;
+    for (const recipeObj of importedRecipeObjects) {
+      if (!recipeObj.title) { console.warn("Skipping invalid recipe object during import (missing title):", recipeObj); continue; }
+      
+      let ingredientGroupsToImport: IngredientGroup[];
+      if (recipeObj.ingredientGroups && Array.isArray(recipeObj.ingredientGroups)) {
+          ingredientGroupsToImport = recipeObj.ingredientGroups.map((group: any) => ({
+              id: group.id || uuidv4(),
+              name: group.name || "",
+              ingredients: ensureIngredientStructure(group.ingredients || [])
+          }));
+      } else if (recipeObj.ingredients && Array.isArray(recipeObj.ingredients)) { 
+          ingredientGroupsToImport = [{
+              id: uuidv4(),
+              name: t('default_ingredient_group_name'),
+              ingredients: ensureIngredientStructure(recipeObj.ingredients)
+          }];
+      } else {
+          ingredientGroupsToImport = [ensureIngredientGroupStructure([], t)[0]];
       }
-      return { success: true, count: importedCount };
-    } catch (e: any) { return { success: false, count: 0, error: e.message || t("error_importing_recipes") }; }
+
+      const instructionsToImport = ensureInstructionStepsStructure(recipeObj.instructions || [{id: uuidv4(), text: recipeObj.instructions || "", isChecked: false}]);
+      const tipsToImport = ensureTipStepsStructure(recipeObj.tips || []);
+      const servingsValue = recipeObj.servingsValue !== undefined ? Number(recipeObj.servingsValue) : (recipeObj.servings !== undefined ? Number(recipeObj.servings) : 1);
+      const servingsUnit = recipeObj.servingsUnit || 'servings' as ServingsUnit;
+
+      const recipeToImport: Omit<Recipe, "id" | "createdAt" | "updatedAt" | "ratings" | "averageRating" | "numRatings"> & { createdAt: string, updatedAt: string, ratings: {}, averageRating: number, numRatings: number } = {
+        title: recipeObj.title,
+        description: recipeObj.description || "",
+        ingredientGroups: ingredientGroupsToImport.map(g => ({...g, ingredients: g.ingredients.map(({fieldId, ...restI}) => restI), fieldId: undefined})).map(({fieldId, ...restG})=> restG),
+        instructions: instructionsToImport.map(({fieldId, ...restS}) => ({...restS, isChecked: false})),
+        tips: tipsToImport.map(({fieldId, ...restT}) => ({...restT, isChecked: false})),
+        tags: Array.isArray(recipeObj.tags) ? recipeObj.tags.map(String) : [],
+        categories: Array.isArray(recipeObj.categories) ? recipeObj.categories.map(String) : [],
+        servingsValue,
+        servingsUnit,
+        prepTime: recipeObj.prepTime || "",
+        cookTime: recipeObj.cookTime || "",
+        imageUrl: recipeObj.imageUrl || "",
+        sourceUrl: recipeObj.sourceUrl || null, 
+        isPublic: recipeObj.isPublic === undefined ? true : recipeObj.isPublic,
+        createdBy: user.uid, 
+        createdAt: recipeObj.createdAt || new Date().toISOString(),
+        updatedAt: recipeObj.updatedAt || new Date().toISOString(),
+        ratings: recipeObj.ratings || {},
+        averageRating: recipeObj.averageRating || 0,
+        numRatings: recipeObj.numRatings || 0,
+      };
+      
+      const newRecipeDocRef = doc(collection(db, "recipes")); // Create a new doc ref for batch
+      batch.set(newRecipeDocRef, recipeToImport);
+      importedCount++;
+    }
+    try {
+        await batch.commit();
+        return { success: true, count: importedCount };
+    } catch (e: any) {
+        return { success: false, count: 0, error: e.message || t("error_importing_recipes") };
+    }
   };
   
   return (

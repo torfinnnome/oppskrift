@@ -10,11 +10,12 @@ import { Input } from "@/components/ui/input";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTranslation } from "@/lib/i18n";
-import { PlusCircle, Search, Frown, XCircle, Loader2, Tag, Bookmark, Eye, Users, Lock, ListFilter, BookOpen } from "lucide-react";
+import { PlusCircle, Search, Frown, XCircle, Loader2, Tag, Bookmark, Eye, Users, Lock, ListFilter, BookOpen, AlertTriangle } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { Recipe } from "@/types";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 type VisibilityFilter = "all-viewable" | "my-all" | "my-public" | "my-private" | "community-public";
 
@@ -28,7 +29,7 @@ const visibilityFilterOptions: { value: VisibilityFilter; labelKey: string; icon
 
 function HomePageContent() {
   const { recipes, loading: recipesLoading } = useRecipes();
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, isUserApproved } = useAuth();
   const { t } = useTranslation();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -42,13 +43,11 @@ function HomePageContent() {
     if (!authLoading) {
       if (user) {
         if (!categoryFilter && !tagFilter) {
-          setVisibilityFilter("all-viewable"); // Default for logged-in users is to see their own + community public
+          setVisibilityFilter("all-viewable"); 
         } else {
           setVisibilityFilter("all-viewable");
         }
       } else {
-        // Logged-out users: "all-viewable" contextually means nothing for list views here.
-        // The UI will show a welcome message instead of trying to list based on this.
         setVisibilityFilter("all-viewable"); 
       }
     }
@@ -75,11 +74,7 @@ function HomePageContent() {
       } else if (visibilityFilter === "community-public") {
         currentRecipes = currentRecipes.filter(recipe => recipe.createdBy !== user.uid && recipe.isPublic);
       }
-      // If visibilityFilter is "all-viewable", context already provides (user's + community public).
     } else { 
-        // For unauthenticated users, no recipes should be listed on the main page.
-        // The RecipeContext might still fetch public recipes for direct URL access,
-        // but this component won't display them in list form.
         return []; 
     }
 
@@ -100,7 +95,7 @@ function HomePageContent() {
         const descriptionMatch = recipe.description?.toLowerCase().includes(lowerSearchTerm) || false;
         const categoryMatch = recipe.categories?.some(cat => cat.toLowerCase().includes(lowerSearchTerm)) || false;
         const tagMatch = recipe.tags?.some(tag => tag.toLowerCase().includes(lowerSearchTerm)) || false;
-        const ingredientMatch = recipe.ingredients?.some(ing => ing.name.toLowerCase().includes(lowerSearchTerm)) || false;
+        const ingredientMatch = recipe.ingredientGroups?.some(group => group.ingredients.some(ing => ing.name.toLowerCase().includes(lowerSearchTerm))) || false;
         return titleMatch || descriptionMatch || categoryMatch || tagMatch || ingredientMatch;
       });
     }
@@ -113,7 +108,7 @@ function HomePageContent() {
       <div className="flex flex-col items-center justify-center min-h-[calc(100vh-200px)] text-center">
         <BookOpen className="h-24 w-24 text-primary mb-6" />
         <h1 className="text-3xl font-bold mb-4">{t('welcome_to_oppskrift_title')}</h1>
-        <p className="text-lg text-muted-foreground mb-8 max-w-md">{t('welcome_to_oppskrift_desc_unapproved')}</p>
+        <p className="text-lg text-muted-foreground mb-8 max-w-md">{t('welcome_to_oppskrift_desc_unauthenticated')}</p>
         <div className="space-x-4">
           <Button asChild size="lg">
             <Link href="/login">{t('login')}</Link>
@@ -132,7 +127,7 @@ function HomePageContent() {
   const activeFilterValue = categoryFilter || tagFilter;
   const activeFilterType = categoryFilter ? 'category' : (tagFilter ? 'tag' : null);
   const myAllIsActiveBadge = user && visibilityFilter === "my-all" && (!!categoryFilter || !!tagFilter);
-  const otherVisibilityFilterActive = user && visibilityFilter !== "all-viewable"; // Simplified, "all-viewable" is the default for logged-in.
+  const otherVisibilityFilterActive = user && visibilityFilter !== "all-viewable"; 
   const isAnyFilterActive = activeFilterValue || searchTerm || myAllIsActiveBadge || otherVisibilityFilterActive;
 
 
@@ -168,7 +163,7 @@ function HomePageContent() {
               </SelectContent>
             </Select>
           )}
-          {user && (
+          {user && isUserApproved && (
             <Button asChild className="w-full sm:w-auto">
               <Link href="/recipes/new">
                 <PlusCircle className="mr-2 h-4 w-4" /> {t('add_recipe')}
@@ -177,6 +172,17 @@ function HomePageContent() {
           )}
         </div>
       </div>
+      
+      {user && !isUserApproved && !authLoading && (
+        <Alert variant="default" className="bg-yellow-50 border-yellow-300 text-yellow-700">
+          <AlertTriangle className="h-5 w-5 text-yellow-600" />
+          <AlertTitle className="font-semibold text-yellow-800">{t('account_pending_approval_title')}</AlertTitle>
+          <AlertDescription className="text-yellow-700">
+            {t('account_pending_approval_desc')}
+          </AlertDescription>
+        </Alert>
+      )}
+
 
       {isAnyFilterActive && (
         <div className="flex items-center gap-2 mb-4 flex-wrap p-3 bg-muted/50 rounded-lg">
@@ -219,13 +225,13 @@ function HomePageContent() {
             </div>
           ))}
         </div>
-      ) : user && filteredRecipes.length > 0 ? ( // Only show list if user is logged in and has recipes
+      ) : user && filteredRecipes.length > 0 ? ( 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {filteredRecipes.map((recipe) => (
             <RecipeCard key={recipe.id} recipe={recipe} />
           ))}
         </div>
-      ) : user ? ( // Logged in, but no recipes match filters or none exist
+      ) : user ? ( 
         <div className="text-center py-12">
           <Frown className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
           <p className="text-xl text-muted-foreground">
@@ -233,14 +239,14 @@ function HomePageContent() {
              activeFilterType === 'tag' && tagFilter ? t('no_recipes_found_for_tag', { tag: tagFilter }) :
              (user && visibilityFilter !== "all-viewable") ? t('no_recipes_found_for_visibility', { filter: t(visibilityFilterOptions.find(opt => opt.value === visibilityFilter)?.labelKey || 'current filter')}) :
              searchTerm ? t('no_recipes_found_for_search', { term: searchTerm }) :
-             t('no_recipes_found_authenticated_user')}
+             (isUserApproved ? t('no_recipes_found_authenticated_user') : t('account_pending_approval_no_recipes'))}
           </p>
           {isAnyFilterActive && (
              <Button variant="link" onClick={handleClearFilters} className="mt-2">
                 {t('show_all_recipes')}
             </Button>
           )}
-           {!isAnyFilterActive && (
+           {!isAnyFilterActive && isUserApproved && (
              <Button asChild className="mt-4">
               <Link href="/recipes/new">
                 <PlusCircle className="mr-2 h-4 w-4" /> {t('add_your_first_recipe_button')}
@@ -260,4 +266,3 @@ export default function HomePage() {
     </Suspense>
   );
 }
-    

@@ -17,11 +17,10 @@ import {
 } from "firebase/auth";
 import type { User } from "@/types"; // Your app's User type
 import React, { createContext, useState, useContext, ReactNode, useEffect } from "react";
-import { auth as firebaseAuth } from "@/firebase"; // Your Firebase initialized auth
+import { auth as firebaseAuth, db } from "@/firebase"; // Your Firebase initialized auth
+import { doc, getDoc, setDoc, updateDoc, serverTimestamp } from "firebase/firestore"; // Firestore imports
 import { toast } from "@/hooks/use-toast";
-import { useTranslation } from "@/lib/i18n"; // For translating error messages
-
-// Firebase auth error codes: https://firebase.google.com/docs/auth/admin/errors
+import { useTranslation } from "@/lib/i18n";
 
 interface UpdateUserOptions {
   displayName?: string;
@@ -32,7 +31,8 @@ interface UpdateUserOptions {
 interface AuthContextType {
   user: User | null;
   loading: boolean;
-  isAdmin: boolean; // New admin flag
+  isAdmin: boolean;
+  isUserApproved: boolean; // New flag for user approval status
   signUp: (email: string, password: string, displayName?: string) => Promise<{ success: boolean; error?: string; errorCode?: string }>;
   logIn: (email: string, password: string) => Promise<{ success: boolean; error?: string; errorCode?: string }>;
   logOut: () => Promise<void>;
@@ -42,31 +42,81 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const mapFirebaseUserToAppUser = (firebaseUser: FirebaseUserType | null): User | null => {
+const mapFirebaseUserToAppUser = async (firebaseUser: FirebaseUserType | null): Promise<User | null> => {
   if (!firebaseUser) return null;
+  let isApproved = false;
+  let roles: string[] = [];
+
+  if (db) {
+    try {
+      const userDocRef = doc(db, "users", firebaseUser.uid);
+      let userDocSnap = await getDoc(userDocRef);
+
+      if (!userDocSnap.exists()) {
+        // User exists in Auth but not in Firestore 'users' collection.
+        // Create their document now.
+        console.log(`User document for ${firebaseUser.uid} not found. Creating now.`);
+        const newUserDocData = {
+          uid: firebaseUser.uid,
+          email: firebaseUser.email,
+          displayName: firebaseUser.displayName || "",
+          isApproved: false, // Default to not approved
+          roles: ['user'],   // Default role
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        };
+        await setDoc(userDocRef, newUserDocData);
+        // Re-fetch the snapshot after creation
+        userDocSnap = await getDoc(userDocRef); 
+        isApproved = false; // They've just been created, so they are not approved yet
+        roles = ['user'];
+      } else {
+        const userData = userDocSnap.data();
+        isApproved = userData.isApproved || false;
+        roles = userData.roles || [];
+      }
+    } catch (error) {
+      console.error("Error fetching or creating user document:", error);
+      // Keep isApproved as false and roles empty if there's an error
+      isApproved = false;
+      roles = [];
+    }
+  }
+
+
   return {
     uid: firebaseUser.uid,
     email: firebaseUser.email,
     displayName: firebaseUser.displayName,
+    isApproved,
+    roles,
   };
 };
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const [isAdmin, setIsAdmin] = useState(false); // Admin state
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [isUserApproved, setIsUserApproved] = useState(false); // User approval state
   const { t } = useTranslation();
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(firebaseAuth, (firebaseUser) => {
-      const appUser = mapFirebaseUserToAppUser(firebaseUser);
-      setUser(appUser);
-      // Check if the current user is an admin
-      const adminEmail = process.env.NEXT_PUBLIC_ADMIN_USER_EMAIL;
-      if (appUser && adminEmail && appUser.email === adminEmail) {
-        setIsAdmin(true);
+    const unsubscribe = onAuthStateChanged(firebaseAuth, async (firebaseUser) => {
+      if (firebaseUser) {
+        const appUser = await mapFirebaseUserToAppUser(firebaseUser);
+        setUser(appUser);
+        setIsUserApproved(appUser?.isApproved || false);
+
+        const adminEmail = process.env.NEXT_PUBLIC_ADMIN_USER_EMAIL;
+        if (appUser && adminEmail && appUser.email === adminEmail && appUser.isApproved) { // Admin must also be approved
+          setIsAdmin(true);
+        } else {
+          setIsAdmin(false);
+        }
       } else {
+        setUser(null);
         setIsAdmin(false);
+        setIsUserApproved(false);
       }
       setLoading(false);
     });
@@ -77,9 +127,29 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setLoading(true);
     try {
       const userCredential = await createUserWithEmailAndPassword(firebaseAuth, email, password);
-      if (userCredential.user && displayName) {
-        await firebaseUpdateProfile(userCredential.user, { displayName });
-         setUser(mapFirebaseUserToAppUser(firebaseAuth.currentUser));
+      if (userCredential.user) {
+        if (displayName) {
+          await firebaseUpdateProfile(userCredential.user, { displayName });
+        }
+        // Create user document in Firestore
+        if (db) { 
+            const userDocRef = doc(db, "users", userCredential.user.uid);
+            await setDoc(userDocRef, {
+              uid: userCredential.user.uid,
+              email: userCredential.user.email,
+              displayName: displayName || userCredential.user.displayName || "",
+              isApproved: false, // Default to not approved
+              roles: ['user'], // Default role
+              createdAt: serverTimestamp(), 
+              updatedAt: serverTimestamp(),
+            });
+        } else {
+            console.error("Firestore (db) is not initialized. Cannot create user document.");
+        }
+        // Update local auth state immediately for responsiveness
+        const appUser = await mapFirebaseUserToAppUser(firebaseAuth.currentUser);
+        setUser(appUser);
+        setIsUserApproved(appUser?.isApproved || false);
       }
       setLoading(false);
       return { success: true };
@@ -94,6 +164,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setLoading(true);
     try {
       await signInWithEmailAndPassword(firebaseAuth, email, password);
+      // onAuthStateChanged will handle fetching user data and setting approval status,
+      // including creating the user document if it's missing.
       setLoading(false);
       return { success: true };
     } catch (error: any) {
@@ -107,7 +179,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setLoading(true);
     try {
       await signOut(firebaseAuth);
-      setIsAdmin(false); // Reset admin status on logout
+      // State will be cleared by onAuthStateChanged
     } catch (error: any) {
       console.error("Firebase LogOut Error:", error);
       toast({ title: t("error_generic_title"), description: t(`firebase_auth_errors.${error.code}`, t('error_generic_title')), variant: "destructive" });
@@ -124,14 +196,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     try {
       if ((updates.email || updates.newPassword) && currentPassword) {
         if (!currentUser.email) {
-          // This is an unexpected state for an email/password user who is logged in
-          // and trying to perform a sensitive operation.
           console.error("User email is null, cannot re-authenticate for email/password update.");
           setLoading(false);
-          return { 
-            success: false, 
-            error: t('error_updating_profile_unexpected_email_null'), 
-            errorCode: "auth/internal-error-email-null" 
+          return {
+            success: false,
+            error: t('error_updating_profile_unexpected_email_null'),
+            errorCode: "auth/internal-error-email-null"
           };
         }
         const credential = EmailAuthProvider.credential(currentUser.email, currentPassword);
@@ -141,30 +211,40 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         return { success: false, error: t("current_password_required_for_change"), errorCode: "auth/missing-password" };
       }
 
+      const firestoreUpdates: any = {updatedAt: serverTimestamp()};
+
       if (updates.displayName !== undefined && updates.displayName !== currentUser.displayName) {
         await firebaseUpdateProfile(currentUser, { displayName: updates.displayName });
+        firestoreUpdates.displayName = updates.displayName;
       }
       if (updates.email && updates.email !== currentUser.email) {
-        // Re-check email validity before attempting update if it wasn't checked for re-auth
-        if (!currentUser.email && !currentPassword) { 
+        if (!currentUser.email && !currentPassword) {
              console.error("User email is null, cannot update email without re-authentication.");
              setLoading(false);
-             return { 
-                success: false, 
-                error: t('error_updating_profile_unexpected_email_null'), 
-                errorCode: "auth/internal-error-email-null-update" 
+             return {
+                success: false,
+                error: t('error_updating_profile_unexpected_email_null'),
+                errorCode: "auth/internal-error-email-null-update"
              };
         }
         await firebaseUpdateEmail(currentUser, updates.email);
+        firestoreUpdates.email = updates.email;
       }
       if (updates.newPassword) {
         await firebaseUpdatePassword(currentUser, updates.newPassword);
       }
-      
-      setUser(mapFirebaseUserToAppUser(firebaseAuth.currentUser));
-      // Re-check admin status if email might have changed, though admin email is usually static
+
+      if (db && currentUser.uid && Object.keys(firestoreUpdates).length > 1) { // more than just updatedAt
+            const userDocRef = doc(db, "users", currentUser.uid);
+            await updateDoc(userDocRef, firestoreUpdates);
+      }
+
+      const appUser = await mapFirebaseUserToAppUser(firebaseAuth.currentUser);
+      setUser(appUser);
+      setIsUserApproved(appUser?.isApproved || false);
+
       const adminEmail = process.env.NEXT_PUBLIC_ADMIN_USER_EMAIL;
-      if (firebaseAuth.currentUser && adminEmail && firebaseAuth.currentUser.email === adminEmail) {
+       if (appUser && adminEmail && appUser.email === adminEmail && appUser.isApproved) {
         setIsAdmin(true);
       } else {
         setIsAdmin(false);
@@ -178,7 +258,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       return { success: false, error: t(`firebase_auth_errors.${error.code}`, t('error_updating_profile')), errorCode: error.code };
     }
   };
-  
+
   const sendUserPasswordResetEmail = async (email: string): Promise<{ success: boolean; error?: string, errorCode?: string }> => {
     setLoading(true);
     try {
@@ -194,7 +274,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
 
   return (
-    <AuthContext.Provider value={{ user, loading, isAdmin, signUp, logIn, logOut, updateUserProfile, sendUserPasswordResetEmail }}>
+    <AuthContext.Provider value={{ user, loading, isAdmin, isUserApproved, signUp, logIn, logOut, updateUserProfile, sendUserPasswordResetEmail }}>
       {children}
     </AuthContext.Provider>
   );
@@ -207,4 +287,6 @@ export const useAuth = (): AuthContextType => {
   }
   return context;
 };
+    
 
+    
