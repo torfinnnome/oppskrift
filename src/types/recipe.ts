@@ -30,6 +30,8 @@ export interface TipStep {
 
 export type ServingsUnit = 'servings' | 'pieces';
 
+// Removed ShareToken interface
+
 export interface Recipe {
   id: string;
   title: string;
@@ -52,5 +54,6 @@ export interface Recipe {
   ratings?: { [userId: string]: number }; // Map of userId to star rating (1-5)
   averageRating?: number; // Calculated average rating
   numRatings?: number; // Total number of ratings
+  // Removed shareTokens field
 }
 

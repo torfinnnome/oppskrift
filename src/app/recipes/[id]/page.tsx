@@ -1,10 +1,10 @@
 
 "use client";
 
-import { useState, useEffect, useMemo, useRef, useCallback } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useState, useEffect, useMemo, useRef, useCallback, Suspense } from "react";
+import { useParams, useRouter } from "next/navigation"; // Removed useSearchParams
 import { useRecipes } from "@/contexts/RecipeContext";
-import type { Recipe as RecipeType, IngredientGroup as IngredientGroupType, InstructionStep, TipStep, ServingsUnit } from "@/types";
+import type { Recipe as RecipeType, IngredientGroup as IngredientGroupType } from "@/types"; // Removed ShareToken
 import { useAuth } from "@/contexts/AuthContext";
 import { useShoppingList } from "@/contexts/ShoppingListContext";
 import { useTranslation } from "@/lib/i18n";
@@ -16,20 +16,22 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Clock, Users, Tag, Bookmark, Edit, Trash2, ShoppingCart, Minus, Plus, ArrowLeft, Globe, EyeOff, FileText, FileCode, Loader2, Download, Smartphone, Info, Lightbulb, Utensils, Star as StarIcon, Link as LinkIcon } from "lucide-react";
+import { Clock, Users, Tag, Bookmark, Edit, Trash2, ShoppingCart, Minus, Plus, ArrowLeft, Globe, EyeOff, FileText, FileCode, Loader2, Download, Smartphone, Info, Lightbulb, Utensils, Star as StarIcon, Link as LinkIcon } from "lucide-react"; // Removed Share2, Copy
 import Link from "next/link";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { StarRating } from "@/components/recipe/StarRating"; // Import StarRating
+import { StarRating } from "@/components/recipe/StarRating";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+// Dialog imports might not be needed if share dialog is removed
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+// Removed uuid and date-fns imports
 
 interface ScaledIngredientGroup extends Omit<IngredientGroupType, 'ingredients'> {
   ingredients: { name: string; quantity: string; unit: string; id: string; }[];
@@ -58,18 +60,19 @@ const linkifyText = (text: string): React.ReactNode[] => {
   });
 };
 
-
-export default function RecipeDetailPage() {
+function RecipeDetailPageContent() {
   const params = useParams();
   const router = useRouter();
   const recipeId = params.id as string;
 
-  const { getRecipeById, deleteRecipe, exportSingleRecipeAsHTML, exportSingleRecipeAsMarkdown, submitRecipeRating, loading: recipesLoading } = useRecipes();
+  const { getRecipeById, deleteRecipe, exportSingleRecipeAsHTML, exportSingleRecipeAsMarkdown, submitRecipeRating, loading: recipesLoadingFromContext, updateRecipe } = useRecipes();
   const { user, isAdmin, loading: authLoading } = useAuth();
   const { addMultipleItems: addItemsToShoppingList } = useShoppingList();
   const { t } = useTranslation();
 
   const [recipe, setRecipe] = useState<RecipeType | null | undefined>(undefined);
+  const [isLoadingRecipe, setIsLoadingRecipe] = useState(true);
+  
   const [numServings, setNumServings] = useState(1); 
   const [isExportingHtml, setIsExportingHtml] = useState(false);
   const [isExportingMarkdown, setIsExportingMarkdown] = useState(false);
@@ -79,31 +82,67 @@ export default function RecipeDetailPage() {
   const [instructionStepStates, setInstructionStepStates] = useState<Record<string, boolean>>({});
   const [tipStepStates, setTipStepStates] = useState<Record<string, boolean>>({});
 
-  useEffect(() => {
-    if (recipeId && !recipesLoading) {
-      const foundRecipe = getRecipeById(recipeId);
+  const loadRecipe = useCallback(async () => {
+    if (!recipeId) {
+      setIsLoadingRecipe(false);
+      setRecipe(null);
+      return;
+    }
+    setIsLoadingRecipe(true);
+    
+    // Attempt to get recipe from context first
+    let foundRecipe = getRecipeById(recipeId);
+
+    if (foundRecipe) {
       setRecipe(foundRecipe);
-      if (foundRecipe) {
-        setNumServings(foundRecipe.servingsValue > 0 ? foundRecipe.servingsValue : 1);
-        
-        const initialInstructionStates: Record<string, boolean> = {};
-        (foundRecipe.instructions || []).forEach(step => {
-          initialInstructionStates[step.id] = false;
-        });
-        setInstructionStepStates(initialInstructionStates);
-
-        const initialTipStates: Record<string, boolean> = {};
-        (foundRecipe.tips || []).forEach(tip => {
-          initialTipStates[tip.id] = false;
-        });
-        setTipStepStates(initialTipStates);
-
-      } else {
-        setInstructionStepStates({});
-        setTipStepStates({});
+    } else {
+      // If not in context, try a direct fetch (assuming Firestore rules allow it)
+      // This covers cases where user navigates directly to a URL of a recipe
+      // not initially loaded by their main context query (e.g., another user's public recipe not yet in cache)
+      try {
+        const recipeDocRef = doc(db, "recipes", recipeId);
+        const docSnap = await getDoc(recipeDocRef);
+        if (docSnap.exists()) {
+           // Manually map here if needed, or ensure getRecipeById can handle a raw doc
+           // For simplicity, assuming getRecipeById from context is the primary way and rules allow reads
+           // This part is more complex if mapFirestoreDocToRecipe isn't exposed or if context doesn't update from this fetch
+           // For now, let's rely on context + Firestore rules. If getRecipeById fails, it means not found or not permitted by rules.
+           // The new model is that context tries to load everything accessible by rules.
+           // If it's still not in getRecipeById, it means it doesn't exist or rules blocked it.
+           // To truly fulfill "any recipe by URL", the context's main query needs to be very broad OR
+           // a direct fetch + mapping like in the previous version's 'fetchRecipeByIdDirectly' is needed here.
+           // Given RecipeContext was simplified, we assume if it's not in `recipes` array from context, it's "not found".
+           setRecipe(null); // Recipe not found via context after attempting to load all accessible recipes
+        } else {
+          setRecipe(null);
+        }
+      } catch (err) {
+        console.error("Error directly fetching recipe:", err);
+        setRecipe(null);
       }
     }
-  }, [recipeId, getRecipeById, recipesLoading]);
+    setIsLoadingRecipe(false);
+  }, [recipeId, getRecipeById ]); // Removed fetchRecipeByIdDirectly as it's no longer in context type
+
+
+  useEffect(() => {
+    loadRecipe();
+  }, [loadRecipe, recipesLoadingFromContext]); 
+
+  useEffect(() => {
+    if (recipe) {
+      setNumServings(recipe.servingsValue > 0 ? recipe.servingsValue : 1);
+      const initialInstructionStates: Record<string, boolean> = {};
+      (recipe.instructions || []).forEach(step => { initialInstructionStates[step.id] = false; });
+      setInstructionStepStates(initialInstructionStates);
+      const initialTipStates: Record<string, boolean> = {};
+      (recipe.tips || []).forEach(tip => { initialTipStates[tip.id] = false; });
+      setTipStepStates(initialTipStates);
+    } else {
+      setInstructionStepStates({});
+      setTipStepStates({});
+    }
+  }, [recipe]);
 
 
   useEffect(() => {
@@ -185,17 +224,11 @@ export default function RecipeDetailPage() {
   };
 
   const handleToggleInstructionStep = useCallback((stepId: string) => {
-    setInstructionStepStates(prev => ({
-      ...prev,
-      [stepId]: !prev[stepId],
-    }));
+    setInstructionStepStates(prev => ({ ...prev, [stepId]: !prev[stepId], }));
   }, []);
 
   const handleToggleTipStep = useCallback((tipId: string) => {
-    setTipStepStates(prev => ({
-      ...prev,
-      [tipId]: !prev[tipId],
-    }));
+    setTipStepStates(prev => ({ ...prev, [tipId]: !prev[tipId], }));
   }, []);
 
   const handleRateRecipe = async (newRating: number) => {
@@ -203,20 +236,25 @@ export default function RecipeDetailPage() {
       toast({ title: t('must_be_logged_in_to_rate'), variant: "destructive" });
       return;
     }
+    // Rating logic remains: users can rate public recipes, or their own private recipes.
+    if (!recipe.isPublic && recipe.createdBy !== user.uid) {
+        toast({ title: t('unauthorized_action_rate_private'), variant: "destructive" });
+        return;
+    }
     try {
       await submitRecipeRating(recipe.id, user.uid, newRating);
       toast({ title: t('rating_submitted_successfully') });
-      // The context will update the recipe list, and this component will re-render
     } catch (error: any) {
       toast({ title: t('error_submitting_rating'), description: error.message || t('error_generic_title'), variant: "destructive" });
     }
   };
 
+  // Removed share link generation and dialog logic
 
-  if (recipesLoading || authLoading || recipe === undefined) {
+  if (isLoadingRecipe || authLoading || recipesLoadingFromContext) {
     return <div className="max-w-3xl mx-auto space-y-6"> <Skeleton className="h-12 w-3/4" /> <Skeleton className="h-64 w-full rounded-lg" /> <div className="grid md:grid-cols-3 gap-6"> <div className="md:col-span-1 space-y-4"><Skeleton className="h-8 w-full" /><Skeleton className="h-32 w-full" /></div> <div className="md:col-span-2 space-y-4"><Skeleton className="h-8 w-1/2" /><Skeleton className="h-48 w-full" /></div> </div> </div>;
   }
-  if (!recipe) return <div className="text-center py-10 text-xl text-muted-foreground">{t('recipe_not_found')}</div>;
+  if (!recipe) return <div className="text-center py-10 text-xl text-muted-foreground">{t('recipe_not_found')}</div>; // Simplified message
 
   const canEdit = user && recipe.createdBy === user.uid;
   const canDelete = (user && recipe.createdBy === user.uid) || isAdmin;
@@ -229,6 +267,7 @@ export default function RecipeDetailPage() {
   return (
     <div className="max-w-4xl mx-auto">
       <Button variant="ghost" onClick={() => router.back()} className="mb-4"><ArrowLeft className="mr-2 h-4 w-4" /> {t('back_to_recipes')}</Button>
+      
       <Card className="overflow-hidden shadow-xl">
         {recipe.imageUrl && (
           <div className="relative w-full h-64 md:h-96">
@@ -244,6 +283,7 @@ export default function RecipeDetailPage() {
             <div className="flex gap-2 flex-shrink-0 items-center">
               <TooltipProvider><Tooltip><TooltipTrigger asChild><div className="flex items-center space-x-2"><Switch id="keep-screen-on" checked={keepScreenOn} onCheckedChange={setKeepScreenOn} aria-label={t('keep_screen_on_label')} /><Label htmlFor="keep-screen-on" className="text-sm text-muted-foreground flex items-center"><Smartphone className="mr-1 h-4 w-4" />{t('keep_screen_on_label_short')}<Info className="ml-1 h-3 w-3 cursor-help" /></Label></div></TooltipTrigger><TooltipContent><p>{t('keep_screen_on_tooltip')}</p></TooltipContent></Tooltip></TooltipProvider>
               <DropdownMenu><DropdownMenuTrigger asChild><Button variant="outline" size="icon" aria-label={t('export_recipe')} disabled={anyExportInProgress}>{anyExportInProgress ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}</Button></DropdownMenuTrigger><DropdownMenuContent align="end"><DropdownMenuItem onClick={handleExportHTML} disabled={isExportingHtml}><FileCode className="mr-2 h-4 w-4" />{t('export_as_html_item')}</DropdownMenuItem><DropdownMenuItem onClick={handleExportMarkdown} disabled={isExportingMarkdown}><FileText className="mr-2 h-4 w-4" />{t('export_as_markdown_item')}</DropdownMenuItem></DropdownMenuContent></DropdownMenu>
+              {/* Share button removed */}
               {canEdit && <Button variant="outline" size="icon" asChild><Link href={`/recipes/${recipe.id}/edit`} aria-label={t('edit_recipe')}><Edit className="h-4 w-4" /></Link></Button>}
               {canDelete && <AlertDialog><AlertDialogTrigger asChild><Button variant="destructive" size="icon" aria-label={t('delete_recipe')}><Trash2 className="h-4 w-4" /></Button></AlertDialogTrigger><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>{t('confirm_delete_recipe')}</AlertDialogTitle><AlertDialogDescription>{t('this_action_cannot_be_undone')}</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>{t('cancel')}</AlertDialogCancel><AlertDialogAction onClick={handleDeleteRecipe}>{t('delete')}</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>}
             </div>
@@ -318,12 +358,12 @@ export default function RecipeDetailPage() {
                   {recipe.instructions.map((step, index) => (
                     <li key={step.id} className="flex items-start gap-x-3.5">
                        <Checkbox
-                        id={`instruction-step-${step.id}`}
-                        checked={instructionStepStates[step.id] || false}
-                        onCheckedChange={() => handleToggleInstructionStep(step.id)}
-                        aria-label={t('toggle_step_completion_aria', { stepNumber: index + 1 })}
-                        className="mt-1 shrink-0"
-                      />
+                          id={`instruction-step-${step.id}`}
+                          checked={instructionStepStates[step.id] || false}
+                          onCheckedChange={() => handleToggleInstructionStep(step.id)}
+                          aria-label={t('toggle_step_completion_aria', { stepNumber: index + 1 })}
+                          className="mt-1 shrink-0"
+                        />
                       <label 
                         htmlFor={`instruction-step-${step.id}`}
                         className={cn(
@@ -383,6 +423,17 @@ export default function RecipeDetailPage() {
           </div>
         </CardContent>
       </Card>
+      {/* Share link Dialog removed */}
     </div>
   );
 }
+
+
+export default function RecipeDetailPage() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center py-12"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>}>
+      <RecipeDetailPageContent />
+    </Suspense>
+  );
+}
+

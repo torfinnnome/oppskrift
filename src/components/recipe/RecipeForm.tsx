@@ -368,12 +368,12 @@ export function RecipeForm({ initialData, isEditMode = false }: RecipeFormProps)
       cookTime: parsedData.cookTime || "",
       tags: parsedData.tags || "",
       categories: parsedData.categories || "",
-      imageUrl: "", 
+      imageUrl: parsedData.extractedImageUrl || "", 
       sourceUrl: parsedData.sourceUrl || "", 
       isPublic: form.getValues("isPublic") 
     };
     form.reset(formValuesToSet);
-    setCurrentImageUrlPreview(undefined); 
+    setCurrentImageUrlPreview(parsedData.extractedImageUrl || undefined); 
   };
 
   const handleImportRecipeText = async () => {
@@ -907,10 +907,10 @@ export function RecipeForm({ initialData, isEditMode = false }: RecipeFormProps)
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <FormField control={form.control} name="categories" render={({ field }) => (
-                <FormItem><FormLabel>{t('categories')} ({t('comma_separated')})</FormLabel><FormControl><Input placeholder={t('categories_placeholder')} {...field} value={field.value || ''} /></FormControl><FormMessage>{translateError(form.formState.errors.categories?.message)}</FormMessage></FormItem>
+                <FormItem><FormLabel>{t('categories')} ({t('comma_separated')})</FormLabel><FormControl><Input placeholder={t('categories_placeholder')} {...field} value={Array.isArray(field.value) ? field.value.join(', ') : field.value || ''} onChange={(e) => field.onChange(e.target.value)} /></FormControl><FormMessage>{translateError(form.formState.errors.categories?.message)}</FormMessage></FormItem>
               )} />
               <FormField control={form.control} name="tags" render={({ field }) => (
-                <FormItem><FormLabel>{t('tags')} ({t('comma_separated')})</FormLabel><FormControl><Input placeholder={t('tags_placeholder')} {...field} value={field.value || ''} /></FormControl><FormMessage>{translateError(form.formState.errors.tags?.message)}</FormMessage></FormItem>
+                <FormItem><FormLabel>{t('tags')} ({t('comma_separated')})</FormLabel><FormControl><Input placeholder={t('tags_placeholder')} {...field} value={Array.isArray(field.value) ? field.value.join(', ') : field.value || ''} onChange={(e) => field.onChange(e.target.value)} /></FormControl><FormMessage>{translateError(form.formState.errors.tags?.message)}</FormMessage></FormItem>
               )} />
             </div>
 

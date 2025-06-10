@@ -51,6 +51,7 @@ const ParsedRecipeOutputSchema = z.object({
   tags: z.string().optional().describe("Relevant tags for the recipe, as a single comma-separated string (e.g., 'easy, quick, dessert'). Extract if obvious or explicitly listed."),
   categories: z.string().optional().describe("Relevant categories for the recipe, as a single comma-separated string (e.g., 'Cakes, Norwegian, Baking'). Extract if obvious or explicitly listed."),
   sourceUrl: z.string().optional().describe("If the `inputText` appears to be a valid HTTP/HTTPS URL, this field should contain that exact URL. Otherwise, this field should be omitted or undefined."),
+  extractedImageUrl: z.string().optional().describe("If the input was a URL, this should be the URL of the main recipe image found on the page. Prioritize 'og:image' meta tags, then the most prominent image clearly associated with the recipe title or content. Ensure it's a direct image file link (e.g., .jpg, .png). Otherwise, omit this field."),
 });
 export type ParseRecipeOutput = z.infer<typeof ParsedRecipeOutputSchema>;
 
@@ -88,6 +89,11 @@ Carefully extract the following information:
 - **tags**: Comma-separated tags, if any are apparent.
 - **categories**: Comma-separated categories, if any are apparent.
 - **sourceUrl**: If the \`inputText\` provided above is a valid HTTP or HTTPS URL (e.g., starts with "http://" or "https://"), then set this field to that exact URL. Otherwise, this field should be omitted or left undefined in the JSON output.
+- **extractedImageUrl**: IMPORTANT: If the \`inputText\` is a URL, attempt to extract the URL of the primary image for the recipe. Prioritize as follows:
+    1.  The URL specified in an 'og:image' meta tag.
+    2.  If no 'og:image' tag, look for the most prominent image directly associated with the recipe content (e.g., the main image displayed with the recipe title or steps, not a small icon or unrelated banner).
+    3.  Ensure the URL is a direct link to an image file (e.g., ending in .jpg, .png, .webp).
+    If a relevant image URL is found, include it here. Otherwise, this field should be omitted or undefined.
 
 If the input is a URL, attempt to fetch and parse its content as if it were recipe text.
 Prioritize accuracy and structure. If some information is not available in the source, omit the corresponding optional fields in the output.
@@ -100,9 +106,11 @@ Example for a URL like 'https://www.godt.no/oppskrifter/kaker/kremkaker/8895/mar
 - Ingredients like "150 g eggehviter" should be: name: "eggehviter", quantity: "150", unit: "g".
 - "3 dl sukker" should be: name: "sukker", quantity: "3", unit: "dl".
 - "Saften av 1 stk sitron" should be name: "sitron", quantity: "1", unit: "stk saften av".
+- extractedImageUrl: Try to find the main recipe image URL from this page, prioritizing 'og:image' or the most prominent recipe-specific image.
 
 For the 'Eplekake' text example:
 - sourceUrl should be undefined or omitted.
+- extractedImageUrl should be undefined or omitted.
 - Title should be 'Eplekake'.
 - Ingredients like '250 g smør' should be: name: 'smør', quantity: '250', unit: 'g'.
 - '5 egg' should be name: 'egg', quantity: '5', unit: (empty or 'stk').

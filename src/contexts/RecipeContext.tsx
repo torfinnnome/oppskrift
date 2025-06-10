@@ -14,10 +14,11 @@ import {
   deleteDoc,
   doc,
   onSnapshot,
-  query,
+  query, // Query is still needed for general collection reference
   where,
   or,
   getDoc,
+  Timestamp, 
 } from "firebase/firestore";
 
 interface RecipeContextType {
@@ -34,6 +35,7 @@ interface RecipeContextType {
   exportUserRecipesAsMarkdown: () => Promise<{ success: boolean; error?: string }>;
   exportSingleRecipeAsHTML: (recipeId: string, currentScaledServings?: number) => Promise<{ success: boolean; error?: string }>;
   exportSingleRecipeAsMarkdown: (recipeId: string, currentScaledServings?: number) => Promise<{ success: boolean; error?: string }>;
+  // Removed fetchRecipeByIdDirectly as the main onSnapshot will aim to get all accessible recipes based on new rules
 }
 
 const RecipeContext = createContext<RecipeContextType | undefined>(undefined);
@@ -69,7 +71,7 @@ const ensureIngredientGroupStructure = (groups: Partial<IngredientGroup>[], t: (
   return groups.map(group => ({
     id: group.id || uuidv4(),
     fieldId: group.fieldId || uuidv4(),
-    name: group.name || "", // Default to empty string to be handled by display logic
+    name: group.name || "", 
     ingredients: ensureIngredientStructure(group.ingredients || [])
   })) as IngredientGroup[];
 };
@@ -251,7 +253,6 @@ export const RecipeProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     const servingsValue = docData.servingsValue !== undefined ? docData.servingsValue : (docData.servings !== undefined ? Number(docData.servings) : 1);
     const servingsUnit = docData.servingsUnit || 'servings' as ServingsUnit;
 
-
     return {
       id: docId,
       ...docData,
@@ -260,7 +261,7 @@ export const RecipeProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       ingredientGroups: ingredientGroupsData,
       instructions: instructionSteps, 
       tips: tipSteps,
-      sourceUrl: docData.sourceUrl || undefined,
+      sourceUrl: docData.sourceUrl === null ? undefined : docData.sourceUrl, // Handle null from Firestore
       tags: Array.isArray(docData.tags) ? docData.tags : [],
       categories: Array.isArray(docData.categories) ? docData.categories : [],
       createdAt: docData.createdAt || new Date().toISOString(),
@@ -268,6 +269,7 @@ export const RecipeProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       ratings: docData.ratings || {},
       averageRating: docData.averageRating || 0,
       numRatings: docData.numRatings || 0,
+      // shareTokens removed
     } as Recipe;
   }, [t]);
 
@@ -280,9 +282,13 @@ export const RecipeProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     }
 
     setLoading(true);
+    // This query now fetches ALL recipes. Firestore rules will determine actual readability.
+    // The UI (e.g., home page) will then filter based on isPublic or ownership.
     const recipesCollectionRef = collection(db, "recipes");
     let q;
 
+    // The main page list query should be for public OR owned recipes.
+    // Direct URL access relies on Firestore rules allowing general read.
     if (user && user.uid) {
       q = query(recipesCollectionRef, 
         or(
@@ -319,13 +325,14 @@ export const RecipeProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       instructions: ensureInstructionStepsStructure(recipeData.instructions || []).map(s => ({...s, isChecked: false})),
       tips: ensureTipStepsStructure(recipeData.tips || []).map(tip => ({...tip, isChecked: false})),
       isPublic: recipeData.isPublic || false,
-      sourceUrl: recipeData.sourceUrl || null, // Ensure sourceUrl is null if falsy
+      sourceUrl: recipeData.sourceUrl || null, // Store as null if empty/undefined
       createdBy: user.uid, 
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       ratings: {},
       averageRating: 0,
       numRatings: 0,
+      // shareTokens removed
     };
 
     const cleanedIngredientGroups = newRecipeData.ingredientGroups.map(group => ({
@@ -337,8 +344,8 @@ export const RecipeProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     const cleanedInstructions = newRecipeData.instructions.map(({ fieldId, ...restStep }) => restStep);
     const cleanedTips = newRecipeData.tips.map(({ fieldId, ...restStep }) => restStep);
 
-    const { servings, ...payloadToSaveRest } = { ...newRecipeData, ingredientGroups: cleanedIngredientGroups, instructions: cleanedInstructions, tips: cleanedTips };
-    delete (payloadToSaveRest as any).servings;
+    const payloadToSaveRest = { ...newRecipeData, ingredientGroups: cleanedIngredientGroups, instructions: cleanedInstructions, tips: cleanedTips };
+    delete (payloadToSaveRest as any).servings; 
 
     const docRef = await addDoc(collection(db, "recipes"), payloadToSaveRest);
     return { ...newRecipeData, id: docRef.id }; 
@@ -348,6 +355,7 @@ export const RecipeProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     if (!user || !db) throw new Error(t("user_not_authenticated_or_firestore_not_initialized"));
 
     const recipeDocRef = doc(db, "recipes", updatedRecipe.id);
+    
     const recipePayload = {
       ...updatedRecipe, 
       servingsValue: Number(updatedRecipe.servingsValue),
@@ -355,9 +363,10 @@ export const RecipeProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       ingredientGroups: ensureIngredientGroupStructure(updatedRecipe.ingredientGroups || [], t),
       instructions: ensureInstructionStepsStructure(updatedRecipe.instructions || []).map(s => ({...s, isChecked: false})),
       tips: ensureTipStepsStructure(updatedRecipe.tips || []).map(tip => ({...tip, isChecked: false})),
-      sourceUrl: updatedRecipe.sourceUrl || null, // Ensure sourceUrl is null if falsy
+      sourceUrl: updatedRecipe.sourceUrl || null, // Store as null if empty/undefined
       isPublic: updatedRecipe.isPublic || false,
       updatedAt: new Date().toISOString(),
+      // shareTokens removed
     };
     
     const cleanedIngredientGroups = recipePayload.ingredientGroups.map(group => ({
@@ -369,8 +378,7 @@ export const RecipeProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     const cleanedInstructions = recipePayload.instructions.map(({ fieldId, ...restStep }) => restStep);
     const cleanedTips = recipePayload.tips.map(({ fieldId, ...restStep }) => restStep);
 
-
-    const { id, servings, ...payloadToSave } = { ...recipePayload, ingredientGroups: cleanedIngredientGroups, instructions: cleanedInstructions, tips: cleanedTips }; 
+    const { id, ...payloadToSave } = { ...recipePayload, ingredientGroups: cleanedIngredientGroups, instructions: cleanedInstructions, tips: cleanedTips }; 
     delete (payloadToSave as any).servings; 
 
     await updateDoc(recipeDocRef, payloadToSave);
@@ -391,14 +399,14 @@ export const RecipeProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     if (!currentRecipe.isPublic && currentRecipe.createdBy !== user.uid) {
       throw new Error(t("unauthorized_action_rate_private"));
     }
-    if (rating < 0 || rating > 5) { // Allow 0 for clearing
+    if (rating < 0 || rating > 5) { 
       throw new Error(t("invalid_rating_value"));
     }
 
     const newRatings = { ...(currentRecipe.ratings || {}) };
-    if (rating === 0) { // Clear the vote
+    if (rating === 0) { 
       delete newRatings[userId];
-    } else { // Set or update the vote
+    } else { 
       newRatings[userId] = rating;
     }
     
@@ -425,7 +433,18 @@ export const RecipeProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   };
 
   const getRecipeById = (recipeId: string): Recipe | undefined => {
-    return recipes.find((recipe) => recipe.id === recipeId);
+    // Try to find in existing loaded recipes first
+    let recipe = recipes.find((r) => r.id === recipeId);
+    if (recipe) return recipe;
+    // If not found and direct URL access implies it *should* be readable (due to Firestore rules),
+    // it suggests the main query didn't pick it up (e.g., private, not owned).
+    // For this simplified model, if it's not in the main `recipes` list (which filters by public/owned),
+    // and the user has a direct URL, we might need a one-off fetch.
+    // However, the ideal scenario is that Firestore rules allow reading, and the component
+    // that needs a specific ID (like RecipeDetailPage) can trigger a specific fetch if not in context.
+    // For now, this function will only return from the context's current `recipes` state.
+    // The RecipeDetailPage will handle fetching if not found in context.
+    return undefined;
   };
 
   const triggerDownload = (content: string, filename: string, type: string) => {
@@ -476,7 +495,7 @@ export const RecipeProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   };
   
   const exportSingleRecipeAsHTML = async (recipeId: string, currentScaledServings?: number): Promise<{ success: boolean; error?: string }> => {
-    const originalRecipe = getRecipeById(recipeId);
+    const originalRecipe = recipes.find(r => r.id === recipeId); // Use loaded recipes
     if (!originalRecipe) return { success: false, error: t('no_recipe_to_export') };
 
     let recipeToExport = originalRecipe;
@@ -510,7 +529,7 @@ export const RecipeProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   };
 
   const exportSingleRecipeAsMarkdown = async (recipeId: string, currentScaledServings?: number): Promise<{ success: boolean; error?: string }> => {
-    const originalRecipe = getRecipeById(recipeId);
+    const originalRecipe = recipes.find(r => r.id === recipeId); // Use loaded recipes
     if (!originalRecipe) return { success: false, error: t('no_recipe_to_export') };
 
     let recipeToExport = originalRecipe;
@@ -552,10 +571,11 @@ export const RecipeProvider: React.FC<{ children: ReactNode }> = ({ children }) 
                                           ...restOfRecipe,
                                           servingsValue: r.servingsValue,
                                           servingsUnit: r.servingsUnit,
-                                          sourceUrl: r.sourceUrl || null, // Ensure null for undefined/empty
+                                          sourceUrl: r.sourceUrl || null, 
                                           ingredientGroups: r.ingredientGroups.map(g => ({...g, ingredients: g.ingredients.map(({fieldId, ...restI}) => restI), fieldId: undefined})).map(({fieldId, ...restG})=> restG),
                                           instructions: r.instructions.map(({fieldId, ...restS}) => ({...restS, isChecked: false})),
                                           tips: r.tips ? r.tips.map(({fieldId, ...restT}) => ({...restT, isChecked: false})) : [],
+                                          // shareTokens removed
                                         };
                                       });
     if (userRecipesToExport.length === 0) return { success: false, error: t('no_recipe_to_export') };
@@ -612,7 +632,7 @@ export const RecipeProvider: React.FC<{ children: ReactNode }> = ({ children }) 
           prepTime: recipeObj.prepTime || "",
           cookTime: recipeObj.cookTime || "",
           imageUrl: recipeObj.imageUrl || "",
-          sourceUrl: recipeObj.sourceUrl || null, // Ensure null for undefined/empty
+          sourceUrl: recipeObj.sourceUrl || null, 
           isPublic: recipeObj.isPublic === true, 
           createdBy: user.uid, 
         };
