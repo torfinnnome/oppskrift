@@ -48,7 +48,7 @@ export default function ForgotPasswordPage() {
       });
       form.reset();
     } else {
-      const errorMessage = result.errorCode ? t(`firebase_auth_errors.${result.errorCode}`, t('error_sending_email')) : t('error_sending_email');
+      const errorMessage = result.message || t('error_sending_email');
       setFormError(errorMessage);
       toast({
         title: t("error_sending_email_title"),

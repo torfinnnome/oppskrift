@@ -1,7 +1,7 @@
 
 # Oppskrift - Your Personal Recipe Book
 
-Oppskrift is a modern, web-based application designed to help you manage your personal recipe collection with ease. Built with Next.js and Firebase, it offers a streamlined experience for creating, viewing, editing, and organizing your favorite recipes.
+Oppskrift is a modern, web-based application designed to help you manage your personal recipe collection with ease. Built with Next.js and Prisma, it offers a streamlined experience for creating, viewing, editing, and organizing your favorite recipes.
 
 ## Screenshot
 
@@ -19,176 +19,76 @@ Oppskrift is a modern, web-based application designed to help you manage your pe
 *   **Dynamic Ingredient Scaling:** Adjust serving sizes on the fly, and ingredient quantities will scale automatically.
 *   **Shopping List:** Add ingredients from recipes to a consolidated shopping list.
 *   **Filtering & Searching:** Easily find recipes by searching titles, descriptions, ingredients, categories, or tags. Filter by visibility (public, private, community).
-*   **User Authentication:** Secure user accounts powered by Firebase Authentication (email/password). Includes profile editing (name, email, password) and a password reset flow handled by Firebase.
+*   **User Authentication:** User accounts stored in a local SQLite database. Includes profile editing (name, email, password).
 *   **User Approval System:** New users require admin approval before they can create recipes or rate others' public recipes.
-*   **Persistent Storage:** Recipe data is stored securely in Firebase Firestore.
+*   **Persistent Storage:** Recipe data is stored in an SQLite database. 
 *   **Import/Export:** Users can export their recipes to a JSON file and import recipes from a JSON file. HTML and Markdown export for individual and all user recipes.
 *   **Internationalization (i18n):** Supports multiple languages (English, Norwegian, Spanish).
 *   **Responsive Design:** Built with ShadCN UI components and Tailwind CSS for a clean experience on all devices.
-*   **Admin Functionality:** A designated admin user (defined by email in `.env.local` and UID in Firestore rules) can delete any recipe in the system and approve new users.
+*   **Admin Functionality:** A designated admin user (defined in `prisma/seed.ts`) can delete any recipe in the system and approve new users.
 
 ## Tech Stack
 
 *   **Frontend:** Next.js (App Router), React, TypeScript
 *   **Styling:** Tailwind CSS, ShadCN UI
-*   **Backend & Database:** Firebase (Authentication, Firestore)
+*   **Backend & Database:** NextAuth.js, Prisma (SQLite)
 *   **AI Integration:** Genkit (using Google Gemini models)
 *   **Internationalization:** `i18next` pattern with JSON locale files (adapted for a simpler context-based approach).
 *   **Drag & Drop:** `@hello-pangea/dnd` for reordering ingredients and steps.
 
 ## Getting Started
 
+This application is designed for easy self-hosting. Follow the steps below to get started.
+
 To explore the app, take a look at the main page component located at `src/app/page.tsx`.
-
-### Firebase Setup
-
-Ensure your Firebase project is configured with:
-1.  **Authentication:** Email/Password provider enabled.
-2.  **Firestore:** Database created (choose a region).
-3.  **API Keys:** Your web app's Firebase configuration keys.
 
 ### Environment Variables
 
-Create a `.env.local` file in the root of your project and add the following variables:
+To enable full functionality, especially AI-powered features, you may need to configure the following environment variables. Create a `.env.local` file in the root of your project (if it doesn't already exist) and add the necessary variables.
 
-```env
-# Firebase Configuration (Required)
-NEXT_PUBLIC_FIREBASE_API_KEY="YOUR_API_KEY"
-NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN="YOUR_AUTH_DOMAIN"
-NEXT_PUBLIC_FIREBASE_PROJECT_ID="YOUR_PROJECT_ID"
-NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET="YOUR_STORAGE_BUCKET" # Required by Firebase SDK
-NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID="YOUR_MESSAGING_SENDER_ID"
-NEXT_PUBLIC_FIREBASE_APP_ID="YOUR_APP_ID"
-
-# For Genkit/AI features (using Gemini - if AI image suggestions are used and available)
-# GOOGLE_API_KEY="YOUR_GOOGLE_AI_STUDIO_API_KEY" # Currently image generation via Gemini is restricted in some regions.
-
-# For determining the base URL for links in password reset emails (Required for password reset)
-NEXT_PUBLIC_APP_URL=http://localhost:9002 # Or your deployment URL
-
-# Admin User Configuration (Optional - for admin features)
-# Set the email of the user who should have admin privileges.
-# This is used by the client-side to determine if admin UI should be shown.
-# Actual admin privileges are enforced by Firestore rules using the admin's UID.
-NEXT_PUBLIC_ADMIN_USER_EMAIL="your_admin_email@example.com"
 ```
-**Restart your development server after creating or modifying the `.env.local` file.**
+# .env.local
 
-### Firestore Security Rules
-
-For proper data protection and admin functionality, update your Firestore security rules. Go to your Firebase project -> Firestore Database -> Rules tab, and use the following:
-
-```json
-rules_version = '2';
-
-service cloud.firestore {
-  match /databases/{database}/documents {
-
-    // Function to check if the requesting user is the defined admin by UID
-    function isAdmin() {
-      // IMPORTANT: Replace "YOUR_ADMIN_USER_UID_HERE" with the actual
-      // UID of your admin user from the Firebase Authentication console.
-      // You can find this UID in the Firebase console under Authentication -> Users.
-      return request.auth.uid == "YOUR_ADMIN_USER_UID_HERE";
-    }
-
-    // Function to check if a user is approved
-    function isUserApproved(userId) {
-      return exists(/databases/$(database)/documents/users/$(userId)) &&
-             get(/databases/$(database)/documents/users/$(userId)).data.isApproved == true;
-    }
-
-    match /users/{userId} {
-      // User can read their own data, admin can read any user's data
-      allow read: if request.auth.uid == userId || isAdmin();
-      
-      // User can create their own document on signup
-      allow create: if request.auth.uid == userId &&
-                      request.resource.data.uid == request.auth.uid &&
-                      request.resource.data.email == request.auth.token.email &&
-                      request.resource.data.isApproved == false &&
-                      request.resource.data.roles[0] == 'user' &&
-                      // Assuming client sends createdAt as a string (ISO date) or server timestamp
-                      (request.resource.data.createdAt is string || request.resource.data.createdAt is timestamp); 
-      
-      // Admin can update specific fields like isApproved, roles, and updatedAt
-      // User can update their own displayName, email (if also providing password - handled client side), updatedAt
-      allow update: if (isAdmin() &&
-                       request.resource.data.diff(resource.data).affectedKeys().hasAny(['isApproved', 'roles', 'updatedAt']) &&
-                       (request.resource.data.updatedAt is string || request.resource.data.updatedAt == null || request.resource.data.updatedAt is timestamp)
-                      ) ||
-                      (request.auth.uid == userId &&
-                       request.resource.data.diff(resource.data).affectedKeys().hasOnly(['displayName', 'email', 'updatedAt']) &&
-                       (request.resource.data.updatedAt is string || request.resource.data.updatedAt == null || request.resource.data.updatedAt is timestamp)
-                      );
-
-      // Admin can delete user documents if needed (optional)
-      allow delete: if isAdmin();
-    }
-
-    match /recipes/{recipeId} {
-      // Public recipes are readable by ANYONE (even unauthenticated users).
-      // Authenticated users can also read their own private recipes.
-      allow read: if resource.data.isPublic == true || (request.auth != null && resource.data.createdBy == request.auth.uid);
-      
-      // Users can only create recipes for themselves IF THEY ARE APPROVED.
-      // Ensure required fields for new recipes are present.
-      allow create: if request.auth != null && 
-                      request.resource.data.createdBy == request.auth.uid &&
-                      isUserApproved(request.auth.uid) && // CHECK: User must be approved
-                      request.resource.data.title is string &&
-                      request.resource.data.ingredientGroups is list &&
-                      request.resource.data.instructions is list &&
-                      request.resource.data.servingsValue is number &&
-                      request.resource.data.servingsUnit is string &&
-                      (request.resource.data.createdAt is string || request.resource.data.createdAt is timestamp) && 
-                      (request.resource.data.updatedAt is string || request.resource.data.updatedAt is timestamp);
-      
-      // For updates:
-      allow update: if request.auth != null &&
-                    (
-                      // Case 1: Owner updates (includes rating their own recipe)
-                      (
-                        resource.data.createdBy == request.auth.uid &&
-                        // Cannot change createdBy or createdAt
-                        !(request.resource.data.diff(resource.data).affectedKeys().hasAny(['createdBy', 'createdAt'])) &&
-                        // Ensure updatedAt is an ISO string (matching client behavior) or null
-                        (request.resource.data.updatedAt is string || request.resource.data.updatedAt == null || request.resource.data.updatedAt is timestamp) &&
-                        (
-                          // Approved owner can change anything (except system fields mentioned above)
-                          isUserApproved(request.auth.uid) ||
-                          // OR Unapproved owner can ONLY change rating-related fields on their own recipe
-                          (
-                            !isUserApproved(request.auth.uid) &&
-                            request.resource.data.diff(resource.data).affectedKeys().hasOnly(['ratings', 'averageRating', 'numRatings', 'updatedAt'])
-                          )
-                        )
-                      ) ||
-                      // Case 2: Non-owner (must be approved) rates a public recipe (SIMPLIFIED LOGIC)
-                      (
-                        resource.data.createdBy != request.auth.uid &&    // Not the owner
-                        isUserApproved(request.auth.uid) &&                // Rater must be approved
-                        resource.data.isPublic == true &&                  // Recipe must be public
-                        // Can only change rating-related fields
-                        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['ratings', 'averageRating', 'numRatings', 'updatedAt']) &&
-                        // Ensure updatedAt is an ISO string or null
-                        (request.resource.data.updatedAt is string || request.resource.data.updatedAt == null || request.resource.data.updatedAt is timestamp)
-                      )
-                    );
-      
-      // Admin can delete any recipe, or owner can delete their own.
-      allow delete: if request.auth != null && (resource.data.createdBy == request.auth.uid || isAdmin());
-    }
-
-    match /shoppingLists/{userId}/{document=**} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
-    }
-  }
-}
+# Optional: Your Google Gemini API Key for AI features (e.g., recipe parsing, image suggestions).
+# If not provided, AI features will be disabled.
+# Get your key from Google AI Studio: https://aistudio.google.com/app/apikey
+GEMINI_API_KEY=your_gemini_api_key_here
 ```
-**Remember to replace `"YOUR_ADMIN_USER_UID_HERE"` in the Firestore rules with the actual Firebase UID of your designated admin user.** You can find the UID in the Firebase console under Authentication -> Users tab.
 
-This project was initialized and developed in Firebase Studio.
+*   `GEMINI_API_KEY`: Your API key for accessing Google Gemini models. This is optional. If you do not provide this key, the AI-powered features (like AI-powered recipe import and image suggestions) will be disabled.
+*   `NEXTAUTH_SECRET`: A random string used to hash tokens, sign/encrypt cookies, and generate a key for the NextAuth.js. You can generate a strong secret using `openssl rand -base64 32` or `openssl rand -hex 32`.
+*   `NEXTAUTH_URL`: The base URL of your application (e.g., `http://localhost:3000` or `https://your-app.com`). This is used for callbacks and redirects.
+*   `EMAIL_SERVER_HOST`: The hostname or IP address of your SMTP server.
+*   `EMAIL_SERVER_PORT`: The port of your SMTP server (e.g., `587` for TLS/STARTTLS, `465` for SSL).
+*   `EMAIL_SERVER_SECURE`: Set to `true` if your SMTP server uses SSL/TLS (usually port 465), `false` otherwise (usually port 587 with STARTTLS).
+*   `EMAIL_SERVER_USER`: The username for authenticating with your SMTP server.
+*   `EMAIL_SERVER_PASSWORD`: The password for authenticating with your SMTP server.
+*   `EMAIL_FROM`: The email address that will appear as the sender for outgoing emails (e.g., password reset emails).
+
+
+### Database Setup and Admin User Initialization
+
+This project uses Prisma with SQLite for its database. On the first run, the database will be initialized, and a default admin user will be created.
+
+To set up the database and create the admin user:
+
+1.  **Install dependencies and run migrations/seed:**
+    ```bash
+    npm install
+    ```
+    This command will:
+    *   Install all necessary Node.js dependencies.
+    *   Run Prisma migrations to create the `dev.db` SQLite database file and define its schema.
+    *   Execute the Prisma seed script (`prisma/seed.ts`). If no admin user exists, it will create one with the email `admin@example.com` and a randomly generated 8-character password. This password will be printed to your console during the `npm install` process.
+
+2.  **Start the development server:**
+    ```bash
+    npm run dev
+    ```
+
+**Note:** If you ever need to reset your database (e.g., for development purposes), you can delete the `prisma/dev.db` file and run `npm install` again.
+
+
 
 
     

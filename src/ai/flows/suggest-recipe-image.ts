@@ -59,9 +59,7 @@ const suggestRecipeImageFlow = ai.defineFlow(
       // Base64 string length is roughly 4/3 times the original data size.
       // Let's check if the data URI string itself is > 700,000 characters (approx 700KB string, might be ~500KB data)
       // Firestore string field limit is ~1MB.
-      if (media.url.length > 700000) { 
-          console.warn(`[suggestRecipeImageFlow] Generated image data URI for "${input.recipeTitle}" is very large (length: ${media.url.length}). It might exceed Firestore limits even after client-side resizing. Consider Firebase Storage if this limit is frequently hit.`);
-      }
+      
       console.log(`[suggestRecipeImageFlow] Successfully generated image for title: "${input.recipeTitle}", Data URI length: ${media.url.length}`);
       return {imageUri: media.url};
 

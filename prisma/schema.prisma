@@ -1,0 +1,124 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
+  binaryTargets   = ["native", "rhel-openssl-1.0.x"]
+  seed            = "ts-node prisma/seed.ts"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id               String    @id @default(cuid())
+  email            String?   @unique
+  displayName      String?
+  password         String?
+  resetToken       String?   @unique
+  resetTokenExpiry DateTime?
+  isApproved       Boolean   @default(false)
+  roles            String? // Simple storage for roles, e.g., comma-separated
+  recipes          Recipe[]  @relation("UserRecipes")
+  ratings          Rating[]
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+}
+
+model Recipe {
+  id               String            @id @default(cuid())
+  title            String
+  description      String?
+  ingredientGroups IngredientGroup[]
+  instructions     InstructionStep[]
+  tips             TipStep[]
+  tags             Tag[]             @relation("RecipeTags")
+  categories       Category[]        @relation("RecipeCategories")
+  servingsValue    Int
+  servingsUnit     ServingsUnit
+  prepTime         String?
+  cookTime         String?
+  imageUrl         String?
+  sourceUrl        String?
+  isPublic         Boolean           @default(false)
+  createdById      User?             @relation("UserRecipes", fields: [createdBy], references: [id])
+  createdBy        String?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  ratings          Rating[]
+  averageRating    Float?
+  numRatings       Int?
+  shareTokens      ShareToken[]
+}
+
+model ShareToken {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  sharedBy  String // User ID of who shared it
+  recipe    Recipe   @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  recipeId  String
+}
+
+model IngredientGroup {
+  id          String       @id @default(cuid())
+  name        String
+  ingredients Ingredient[]
+  recipe      Recipe       @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  recipeId    String
+}
+
+model Ingredient {
+  id                String          @id @default(cuid())
+  name              String
+  quantity          String
+  unit              String
+  ingredientGroup   IngredientGroup @relation(fields: [ingredientGroupId], references: [id], onDelete: Cascade)
+  ingredientGroupId String
+}
+
+model InstructionStep {
+  id       String @id @default(cuid())
+  text     String
+  recipe   Recipe @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  recipeId String
+}
+
+model TipStep {
+  id       String @id @default(cuid())
+  text     String
+  recipe   Recipe @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  recipeId String
+}
+
+model Rating {
+  id       String @id @default(cuid())
+  value    Int
+  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId   String
+  recipe   Recipe @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  recipeId String
+
+  @@unique([userId, recipeId])
+}
+
+model Tag {
+  id      String   @id @default(cuid())
+  name    String   @unique
+  recipes Recipe[] @relation("RecipeTags")
+}
+
+model Category {
+  id      String   @id @default(cuid())
+  name    String   @unique
+  recipes Recipe[] @relation("RecipeCategories")
+}
+
+enum ServingsUnit {
+  servings
+  pieces
+}

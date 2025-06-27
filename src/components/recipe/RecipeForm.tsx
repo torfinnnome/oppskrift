@@ -8,7 +8,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import type { Recipe, IngredientGroup, Ingredient, InstructionStep, TipStep, ServingsUnit } from "@/types";
 import { useRecipes } from "@/contexts/RecipeContext";
-import { useAuth } from "@/contexts/AuthContext";
+import { useSession } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -138,7 +138,7 @@ const defaultTipStep = (): TipStep => ({
 export function RecipeForm({ initialData, isEditMode = false }: RecipeFormProps) {
   const router = useRouter();
   const { addRecipe, updateRecipe } = useRecipes();
-  const { user } = useAuth();
+  const { data: session } = useSession();
   const { t, currentLanguage } = useTranslation();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -171,8 +171,8 @@ export function RecipeForm({ initialData, isEditMode = false }: RecipeFormProps)
           ...initialData,
           servingsValue: initialData.servingsValue || (initialData as any).servings || 1,
           servingsUnit: initialData.servingsUnit || 'servings',
-          tags: initialData.tags?.join(", ") || "",
-          categories: initialData.categories?.join(", ") || "",
+          tags: initialData.tags?.map(tag => typeof tag === 'string' ? tag : tag.name).join(", ") || "",
+          categories: initialData.categories?.map(cat => typeof cat === 'string' ? cat : cat.name).join(", ") || "",
           ingredientGroups: Array.isArray(initialData.ingredientGroups) && initialData.ingredientGroups.length > 0
             ? initialData.ingredientGroups.map(group => ({
                 ...group,
@@ -183,6 +183,7 @@ export function RecipeForm({ initialData, isEditMode = false }: RecipeFormProps)
                   ...ing,
                   id: ing.id || uuidv4(),
                   fieldId: ing.fieldId || uuidv4(),
+                  name: String(ing.name || ""),
                   quantity: String(ing.quantity || ""),
                   unit: String(ing.unit || ""),
                 })) : [defaultIngredientWithIds()],
@@ -504,7 +505,7 @@ export function RecipeForm({ initialData, isEditMode = false }: RecipeFormProps)
   };
 
   const onSubmit = async (data: RecipeFormValues) => {
-    if (!user) { toast({ title: t("must_be_logged_in"), variant: "destructive" }); return; }
+    if (!session) { toast({ title: t("must_be_logged_in"), variant: "destructive" }); return; }
     setIsSubmitting(true);
     const payloadIngredientGroups = data.ingredientGroups.map(group => ({
       ...group, id: group.id || uuidv4(), name: group.name || "",
@@ -520,7 +521,7 @@ export function RecipeForm({ initialData, isEditMode = false }: RecipeFormProps)
       isPublic: data.isPublic === undefined ? true : data.isPublic, // Ensure isPublic has a value
       tags: Array.isArray(data.tags) ? data.tags : (data.tags?.split(',').map(tag => tag.trim()).filter(tag => tag) || []),
       categories: Array.isArray(data.categories) ? data.categories : (data.categories?.split(',').map(cat => cat.trim()).filter(cat => cat) || []),
-      createdBy: initialData?.createdBy || user.uid,
+      createdBy: initialData?.createdBy || session.user.id,
     };
     delete (recipePayloadBase as any).servings; 
     try {
@@ -532,12 +533,12 @@ export function RecipeForm({ initialData, isEditMode = false }: RecipeFormProps)
         await updateRecipe(updatedRecipeData);
         toast({ title: t('recipe_updated_successfully') }); router.push(`/recipes/${initialData.id}`);
       } else {
-        const newRecipeDataForAdd = { ...recipePayloadBase } as Omit<Recipe, 'id' | 'createdAt' | 'updatedAt' | 'ratings' | 'averageRating' | 'numRatings'>;
-        const newRecipe = await addRecipe(newRecipeDataForAdd); // addRecipe now defaults isPublic to true
+        const newRecipeDataForAdd = { ...recipePayloadBase } as Omit<Recipe, 'id' | 'createdAt' | 'updatedAt'>;
+        const newRecipe = await addRecipe(newRecipeDataForAdd);
         toast({ title: t('recipe_added_successfully') }); router.push(`/recipes/${newRecipe.id}`);
       }
     } catch (error) {
-      const errorMessage = (error as Error).message || t('error_generic_title');
+      const errorMessage = (error as Error).message || t('error_saving_recipe');
       toast({ title: t('error_saving_recipe'), description: errorMessage, variant: "destructive" });
     } finally { setIsSubmitting(false); }
   };

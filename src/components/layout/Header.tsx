@@ -45,7 +45,7 @@ export function Header() {
             {user && (
               <>
                 <Button variant="ghost" asChild>
-                  <Link href="/">{t('my_recipes')}</Link>
+                  <Link href="/?visibility=my-all">{t('my_recipes')}</Link>
                 </Button>
                 {isUserApproved && (
                   <Button variant="ghost" asChild>

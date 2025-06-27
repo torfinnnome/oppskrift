@@ -1,4 +1,3 @@
-
 export interface Ingredient {
   id: string; // Persistent ID
   fieldId?: string; // Temporary ID for react-hook-form's useFieldArray key
@@ -30,7 +29,12 @@ export interface TipStep {
 
 export type ServingsUnit = 'servings' | 'pieces';
 
-// Removed ShareToken interface
+export interface Rating {
+  id: string;
+  userId: string;
+  recipeId: string;
+  value: number;
+}
 
 export interface Recipe {
   id: string;
@@ -39,8 +43,8 @@ export interface Recipe {
   ingredientGroups: IngredientGroup[];
   instructions: InstructionStep[];
   tips?: TipStep[];
-  tags: string[];
-  categories: string[];
+  tags: { name: string }[];
+  categories: { name: string }[];
   servingsValue: number;
   servingsUnit: ServingsUnit;
   prepTime?: string;
@@ -51,9 +55,7 @@ export interface Recipe {
   createdBy?: string; // User ID
   createdAt: string; // ISO date string
   updatedAt: string; // ISO date string
-  ratings?: { [userId: string]: number }; // Map of userId to star rating (1-5)
+  ratings?: Rating[]; // Updated to reflect API response as an array of Rating objects
   averageRating?: number; // Calculated average rating
   numRatings?: number; // Total number of ratings
-  // Removed shareTokens field
 }
-

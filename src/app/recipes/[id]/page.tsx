@@ -5,9 +5,10 @@ import { useState, useEffect, useMemo, useRef, useCallback, Suspense } from "rea
 import { useParams, useRouter } from "next/navigation"; 
 import { useRecipes } from "@/contexts/RecipeContext";
 import type { Recipe as RecipeType, Ingredient as IngredientType, IngredientGroup as IngredientGroupType, InstructionStep as InstructionStepType, TipStep as TipStepType, ServingsUnit } from "@/types"; 
-import { useAuth } from "@/contexts/AuthContext";
+import { useSession } from "next-auth/react";
 import { useShoppingList } from "@/contexts/ShoppingListContext";
 import { useTranslation } from "@/lib/i18n";
+import { useAuth } from "@/contexts/AuthContext";
 import NextImage from "next/image";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -30,106 +31,15 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
-import { db } from "@/firebase";
-import { doc, getDoc } from "firebase/firestore";
+import useSWR from 'swr';
 import { v4 as uuidv4 } from "uuid";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 
 interface ScaledIngredientGroup extends Omit<IngredientGroupType, 'ingredients'> {
   ingredients: { name: string; quantity: string; unit: string; id: string; }[];
 }
 
-const ensureIngredientStructureOnPage = (ingredients: Partial<IngredientType>[]): IngredientType[] => {
-  return ingredients.map(ing => ({
-    id: ing.id || uuidv4(),
-    fieldId: ing.fieldId || uuidv4(),
-    name: ing.name || '',
-    quantity: ing.quantity || '',
-    unit: ing.unit || ''
-  })) as IngredientType[];
-};
 
-const ensureIngredientGroupStructureOnPage = (groups: Partial<IngredientGroupType>[], t: (key: string) => string): IngredientGroupType[] => {
-  if (!groups || groups.length === 0) {
-    return [{
-      id: uuidv4(),
-      fieldId: uuidv4(),
-      name: t('default_ingredient_group_name'),
-      ingredients: []
-    }];
-  }
-  return groups.map(group => ({
-    id: group.id || uuidv4(),
-    fieldId: group.fieldId || uuidv4(),
-    name: group.name || "",
-    ingredients: ensureIngredientStructureOnPage(group.ingredients || [])
-  })) as IngredientGroupType[];
-};
-
-const ensureInstructionStepsStructureOnPage = (stepsData: any): InstructionStepType[] => {
-  if (typeof stepsData === 'string') {
-    return stepsData.split('\n').filter(line => line.trim() !== '').map(line => ({
-      id: uuidv4(),
-      fieldId: uuidv4(),
-      text: line,
-      isChecked: false,
-    }));
-  }
-  if (Array.isArray(stepsData)) {
-    return stepsData.map((step: any) => ({
-      id: step.id || uuidv4(),
-      fieldId: step.fieldId || uuidv4(),
-      text: step.text || '',
-      isChecked: step.isChecked || false,
-    }));
-  }
-  return [{ id: uuidv4(), fieldId: uuidv4(), text: '', isChecked: false }];
-};
-
-const ensureTipStepsStructureOnPage = (stepsData: any): TipStepType[] => {
-  if (typeof stepsData === 'string') {
-    return stepsData.split('\n').filter(line => line.trim() !== '').map(line => ({
-      id: uuidv4(),
-      fieldId: uuidv4(),
-      text: line,
-      isChecked: false,
-    }));
-  }
-  if (Array.isArray(stepsData)) {
-    return stepsData.map((step: any) => ({
-      id: step.id || uuidv4(),
-      fieldId: step.fieldId || uuidv4(),
-      text: step.text || '',
-      isChecked: step.isChecked || false,
-    }));
-  }
-  return [];
-};
-
-const mapFetchedDocToRecipe = (docData: any, docId: string, t: (key: string) => string): RecipeType => {
-    const ingredientGroupsData = ensureIngredientGroupStructureOnPage(docData.ingredientGroups || (docData.ingredients ? [{ name: t('default_ingredient_group_name'), ingredients: docData.ingredients }] : []), t);
-    const instructionSteps = ensureInstructionStepsStructureOnPage(docData.instructions);
-    const tipSteps = ensureTipStepsStructureOnPage(docData.tips);
-    const servingsValue = docData.servingsValue !== undefined ? docData.servingsValue : (docData.servings !== undefined ? Number(docData.servings) : 1);
-    const servingsUnit = docData.servingsUnit || 'servings' as ServingsUnit;
-
-    return {
-      id: docId,
-      ...docData,
-      servingsValue,
-      servingsUnit,
-      ingredientGroups: ingredientGroupsData,
-      instructions: instructionSteps,
-      tips: tipSteps,
-      sourceUrl: docData.sourceUrl === null ? undefined : docData.sourceUrl,
-      tags: Array.isArray(docData.tags) ? docData.tags : [],
-      categories: Array.isArray(docData.categories) ? docData.categories : [],
-      createdAt: docData.createdAt || new Date().toISOString(),
-      updatedAt: docData.updatedAt || new Date().toISOString(),
-      ratings: docData.ratings || {},
-      averageRating: docData.averageRating || 0,
-      numRatings: docData.numRatings || 0,
-    } as RecipeType;
-};
 
 const scaleIngredientQuantityForDisplay = (quantityStr: string, originalServingsValue: number, newServingsValue: number): string => {
     if (typeof quantityStr !== 'string') return '';
@@ -168,61 +78,30 @@ function RecipeDetailPageContent() {
   const router = useRouter();
   const recipeId = params.id as string;
 
-  const { getRecipeById, deleteRecipe, exportSingleRecipeAsHTML, exportSingleRecipeAsMarkdown, submitRecipeRating, loading: recipesLoadingFromContext, updateRecipe } = useRecipes();
-  const { user, isAdmin, loading: authLoading } = useAuth();
+  const { deleteRecipe, exportSingleRecipeAsHTML, exportSingleRecipeAsMarkdown, submitRecipeRating, loading: recipesLoadingFromContext } = useRecipes();
+  const { data: session, status } = useSession();
   const { addMultipleItems: addItemsToShoppingList } = useShoppingList();
   const { t, currentLanguage } = useTranslation();
+  const { user, isAdmin, loading: authLoading } = useAuth();
 
-  const [recipe, setRecipe] = useState<RecipeType | null | undefined>(undefined);
-  const [isLoadingRecipe, setIsLoadingRecipe] = useState(true);
+  const fetcher = (url: string) => fetch(url).then(res => res.json());
+  const { data: recipe, error, isLoading: isLoadingRecipe } = useSWR<RecipeType>(`/api/recipes/${recipeId}`, fetcher);
 
-  const [numServings, setNumServings] = useState(1); // Holds the numeric value for calculations
-  const [displayServingsInput, setDisplayServingsInput] = useState("1"); // Holds the string for the input field
+  const [numServings, setNumServings] = useState(1);
+  const [displayServingsInput, setDisplayServingsInput] = useState("1");
   
   const [isExportingHtml, setIsExportingHtml] = useState(false);
   const [isExportingMarkdown, setIsExportingMarkdown] = useState(false);
+  const [showExportDialog, setShowExportDialog] = useState(false);
+  const [exportContent, setExportContent] = useState("");
+  const [exportContentType, setExportContentType] = useState<"html" | "markdown" | "">("");
   const [keepScreenOn, setKeepScreenOn] = useState(false);
   const wakeLockRef = useRef<WakeLockSentinel | null>(null);
 
   const [instructionStepStates, setInstructionStepStates] = useState<Record<string, boolean>>({});
   const [tipStepStates, setTipStepStates] = useState<Record<string, boolean>>({});
 
-  const loadRecipe = useCallback(async () => {
-    if (!recipeId) {
-      setIsLoadingRecipe(false);
-      setRecipe(null);
-      return;
-    }
-    setIsLoadingRecipe(true);
-
-    let foundRecipe = getRecipeById(recipeId);
-
-    if (foundRecipe) {
-      setRecipe(foundRecipe);
-      setIsLoadingRecipe(false);
-    } else if (!recipesLoadingFromContext) { 
-      try {
-        const recipeDocRef = doc(db, "recipes", recipeId);
-        const docSnap = await getDoc(recipeDocRef);
-        if (docSnap.exists()) {
-          const fetchedRecipe = mapFetchedDocToRecipe(docSnap.data(), docSnap.id, t);
-          setRecipe(fetchedRecipe);
-        } else {
-          setRecipe(null); 
-        }
-      } catch (err) {
-        console.error("Error directly fetching recipe:", err);
-        setRecipe(null);
-      } finally {
-        setIsLoadingRecipe(false);
-      }
-    }
-  }, [recipeId, getRecipeById, recipesLoadingFromContext, t]);
-
-
-  useEffect(() => {
-    loadRecipe();
-  }, [loadRecipe]); 
+  
 
   useEffect(() => {
     if (recipe) {
@@ -336,14 +215,26 @@ function RecipeDetailPageContent() {
 
   const handleExportHTML = async () => {
     if (!recipe?.id) return; setIsExportingHtml(true);
-    const result = await exportSingleRecipeAsHTML(recipe.id, numServings);
-    if (!result.success) toast({ title: t('error_exporting_html'), description: result.error || t('no_recipe_to_export'), variant: "destructive" });
+    const result = await exportSingleRecipeAsHTML(recipe.id, currentLanguage);
+    if (result.success && result.content) {
+      setExportContent(result.content);
+      setExportContentType("html");
+      setShowExportDialog(true);
+    } else {
+      toast({ title: t('error_exporting_html'), description: result.error || t('no_recipe_to_export'), variant: "destructive" });
+    }
     setIsExportingHtml(false);
   };
   const handleExportMarkdown = async () => {
     if (!recipe?.id) return; setIsExportingMarkdown(true);
-    const result = await exportSingleRecipeAsMarkdown(recipe.id, numServings);
-    if (!result.success) toast({ title: t('error_exporting_markdown'), description: result.error || t('no_recipe_to_export'), variant: "destructive" });
+    const result = await exportSingleRecipeAsMarkdown(recipe.id, currentLanguage);
+    if (result.success && result.content) {
+      setExportContent(result.content);
+      setExportContentType("markdown");
+      setShowExportDialog(true);
+    } else {
+      toast({ title: t('error_exporting_markdown'), description: result.error || t('no_recipe_to_export'), variant: "destructive" });
+    }
     setIsExportingMarkdown(false);
   };
 
@@ -368,7 +259,7 @@ function RecipeDetailPageContent() {
       await submitRecipeRating(recipe.id, user.uid, newRating);
       toast({ title: t('rating_submitted_successfully') });
     } catch (error: any) {
-      toast({ title: t('error_submitting_rating'), description: error.message || t('error_generic_title'), variant: "destructive" });
+      toast({ title: t('error_submitting_rating'), description: error.message, variant: "destructive" });
     }
   };
 
@@ -378,13 +269,13 @@ function RecipeDetailPageContent() {
   }
   if (!recipe) return <div className="text-center py-10 text-xl text-muted-foreground">{t('recipe_not_found')}</div>;
 
-  const canEdit = user && recipe.createdBy === user.uid;
+  const canEdit = (user && recipe.createdBy === user.uid) || isAdmin;
   const canDelete = (user && recipe.createdBy === user.uid) || isAdmin;
   const anyExportInProgress = isExportingHtml || isExportingMarkdown;
 
   const displayServingsUnit = recipe.servingsUnit === 'pieces' ? t('servings_unit_pieces') : t('servings_unit_servings');
   const canVoteOnRecipe = user && (recipe.isPublic || recipe.createdBy === user.uid);
-  const currentUserRating = user ? recipe.ratings?.[user.uid] || 0 : 0;
+  const currentUserRating = user ? recipe.ratings?.find(r => r.userId === user.uid)?.value || 0 : 0;
   
   const communityAverageRating = recipe.averageRating || 0;
   const communityNumRatings = recipe.numRatings || 0;
@@ -556,11 +447,29 @@ function RecipeDetailPageContent() {
 
           {(recipe.categories?.length > 0 || recipe.tags?.length > 0) && <Separator />}
           <div className="space-y-4">
-            {recipe.categories?.length > 0 && <div className="flex items-center gap-2 flex-wrap"><Bookmark className="h-5 w-5 text-primary" /><strong className="text-sm">{t('categories')}:</strong>{recipe.categories.map(cat => <Link key={cat} href={`/?category=${encodeURIComponent(cat)}`} passHref legacyBehavior><a className="no-underline"><Badge variant="secondary" className="cursor-pointer hover:bg-primary/10 hover:border-primary/50 border border-transparent transition-colors">{cat}</Badge></a></Link>)}</div>}
-            {recipe.tags?.length > 0 && <div className="flex items-center gap-2 flex-wrap"><Tag className="h-5 w-5 text-primary" /><strong className="text-sm">{t('tags')}:</strong>{recipe.tags.map(tag => <Link key={tag} href={`/?tag=${encodeURIComponent(tag)}`} passHref legacyBehavior><a className="no-underline"><Badge variant="outline" className="cursor-pointer hover:bg-accent/10 hover:border-accent/50 border border-transparent transition-colors">{tag}</Badge></a></Link>)}</div>}
+            {recipe.categories?.length > 0 && <div className="flex items-center gap-2 flex-wrap"><Bookmark className="h-5 w-5 text-primary" /><strong className="text-sm">{t('categories')}:</strong>{recipe.categories.map(cat => <Link key={cat.name} href={`/?category=${encodeURIComponent(cat.name)}`} passHref legacyBehavior><a className="no-underline"><Badge variant="secondary" className="cursor-pointer hover:bg-primary/10 hover:border-primary/50 border border-transparent transition-colors">{cat.name}</Badge></a></Link>)}</div>}
+            {recipe.tags?.length > 0 && <div className="flex items-center gap-2 flex-wrap"><Tag className="h-5 w-5 text-primary" /><strong className="text-sm">{t('tags')}:</strong>{recipe.tags.map(tag => <Link key={tag.name} href={`/?tag=${encodeURIComponent(tag.name)}`} passHref legacyBehavior><a className="no-underline"><Badge variant="outline" className="cursor-pointer hover:bg-accent/10 hover:border-accent/50 border border-transparent transition-colors">{tag.name}</Badge></a></Link>)}</div>}
           </div>
         </CardContent>
       </Card>
+
+      <Dialog open={showExportDialog} onOpenChange={setShowExportDialog}>
+        <DialogContent className="sm:max-w-[800px] max-h-[90vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle>{t('exported_content')}</DialogTitle>
+            <DialogDescription>
+              {exportContentType === "html" ? t('copy_html_content') : t('copy_markdown_content')}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex-grow overflow-auto rounded-md bg-gray-100 p-4 font-mono text-sm text-gray-800">
+            {exportContentType === "html" ? (
+              <div dangerouslySetInnerHTML={{ __html: exportContent }} />
+            ) : (
+              <pre className="whitespace-pre-wrap break-words">{exportContent}</pre>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

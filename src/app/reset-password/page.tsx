@@ -14,8 +14,8 @@ import { useTranslation } from "@/lib/i18n";
 import { toast } from "@/hooks/use-toast";
 import { Loader2, KeyRound } from "lucide-react";
 import Link from "next/link";
-import { auth as firebaseAuth } from "@/firebase"; // Import Firebase auth
-import { verifyPasswordResetCode, confirmPasswordReset } from "firebase/auth";
+// import { auth as firebaseAuth } from "@/firebase"; // Import Firebase auth
+// import { verifyPasswordResetCode, confirmPasswordReset } from "firebase/auth";
 
 const passwordResetSchemaFactory = (t: (key: string, params?: any) => string) => z.object({
   newPassword: z.string().min(6, { message: t("password_min_length", {length: 6}) }),
@@ -36,7 +36,7 @@ function ResetPasswordPageContent() {
   const [tokenVerified, setTokenVerified] = useState(false);
   const [isLoadingToken, setIsLoadingToken] = useState(true);
   
-  const oobCode = searchParams.get("oobCode"); // Firebase uses 'oobCode' for password reset
+  const token = searchParams.get("token");
 
   const passwordResetSchema = passwordResetSchemaFactory(t);
   const form = useForm<PasswordResetFormValues>({
@@ -47,33 +47,43 @@ function ResetPasswordPageContent() {
     },
   });
 
+  // useEffect(() => {
+  //   async function checkToken() {
+  //     if (!oobCode) {
+  //       setTokenError(t("firebase_auth_errors.auth/missing-action-code", t("missing_reset_token")));
+  //       setIsLoadingToken(false);
+  //       setTokenVerified(false);
+  //       return;
+  //     }
+  //     try {
+  //       // Verify the password reset code. 
+  //       // This checks if the code is valid and not expired.
+  //       // It also returns the email of the user if the code is valid.
+  //       await verifyPasswordResetCode(firebaseAuth, oobCode);
+  //       setTokenVerified(true);
+  //     } catch (error: any) {
+  //       console.error("Firebase verifyPasswordResetCode error:", error);
+  //       setTokenError(t(`firebase_auth_errors.${error.code}`, t("invalid_or_expired_token")));
+  //       setTokenVerified(false);
+  //     } finally {
+  //       setIsLoadingToken(false);
+  //     }
+  //   }
+  //   checkToken();
+  // }, [oobCode, t]);
+
+  // Temporarily set tokenVerified to true for testing purposes
   useEffect(() => {
-    async function checkToken() {
-      if (!oobCode) {
-        setTokenError(t("firebase_auth_errors.auth/missing-action-code", t("missing_reset_token")));
-        setIsLoadingToken(false);
-        setTokenVerified(false);
-        return;
-      }
-      try {
-        // Verify the password reset code. 
-        // This checks if the code is valid and not expired.
-        // It also returns the email of the user if the code is valid.
-        await verifyPasswordResetCode(firebaseAuth, oobCode);
-        setTokenVerified(true);
-      } catch (error: any) {
-        console.error("Firebase verifyPasswordResetCode error:", error);
-        setTokenError(t(`firebase_auth_errors.${error.code}`, t("invalid_or_expired_token")));
-        setTokenVerified(false);
-      } finally {
-        setIsLoadingToken(false);
-      }
+    if (token) {
+      setTokenVerified(true);
+    } else {
+      setTokenError(t("missing_reset_token"));
     }
-    checkToken();
-  }, [oobCode, t]);
+    setIsLoadingToken(false);
+  }, [token, t]);
 
   const onSubmit = async (data: PasswordResetFormValues) => {
-    if (!oobCode || !tokenVerified) {
+    if (!token || !tokenVerified) {
       toast({ title: t("error_generic_title"), description: t("invalid_or_expired_token"), variant: "destructive" });
       setIsSubmitting(false);
       return;
@@ -81,13 +91,26 @@ function ResetPasswordPageContent() {
     setIsSubmitting(true);
 
     try {
-      await confirmPasswordReset(firebaseAuth, oobCode, data.newPassword);
-      toast({ title: t("password_reset_success_title"), description: t("password_reset_success_desc") });
-      router.push("/login");
+      const response = await fetch("/api/auth/reset-password", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token: token, newPassword: data.newPassword }),
+      });
+
+      const result = await response.json();
+
+      if (response.ok) {
+        toast({ title: t("password_reset_success_title"), description: t("password_reset_success_desc") });
+        router.push("/login");
+      } else {
+        setTokenError(result.message || t("invalid_or_expired_token"));
+        toast({ title: t("error_generic_title"), description: result.message || t("error_updating_password_locally"), variant: "destructive"});
+        setTokenVerified(false); // Invalidate the form effectively
+      }
     } catch (error: any) {
-      console.error("Firebase confirmPasswordReset error:", error);
-      toast({ title: t("error_generic_title"), description: t(`firebase_auth_errors.${error.code}`, t("error_updating_password_locally")), variant: "destructive"});
-      setTokenError(t(`firebase_auth_errors.${error.code}`, t("invalid_or_expired_token"))); // Show error and disable form
+      console.error("Error resetting password:", error);
+      toast({ title: t("error_generic_title"), description: t("error_updating_password_locally"), variant: "destructive"});
+      setTokenError(t("invalid_or_expired_token")); // Show error and disable form
       setTokenVerified(false); // Invalidate the form effectively
     } finally {
       setIsSubmitting(false);
@@ -126,9 +149,9 @@ function ResetPasswordPageContent() {
       <Card className="w-full max-w-md shadow-xl">
         <CardHeader className="text-center">
           <CardTitle className="text-2xl font-bold">{t('reset_your_password')}</CardTitle>
-          {/* We don't have user's email here directly from Firebase verify, so generic message */}
+          
           <CardDescription>
-            {t('reset_password_page_description_firebase')}
+            {t('reset_password_page_description')}
           </CardDescription>
         </CardHeader>
         <CardContent>

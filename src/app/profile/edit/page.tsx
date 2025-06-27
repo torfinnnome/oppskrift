@@ -60,7 +60,13 @@ export default function EditProfilePage() {
 
   const form = useForm<ProfileEditFormValues>({
     resolver: zodResolver(profileEditSchema),
-    // Default values will be set in useEffect once user data is available
+    defaultValues: {
+      displayName: "",
+      email: "",
+      currentPassword: "",
+      newPassword: "",
+      confirmNewPassword: "",
+    },
   });
   
   useEffect(() => {
@@ -101,7 +107,7 @@ export default function EditProfilePage() {
       });
       router.push("/profile");
     } else {
-      const errorMessage = result.errorCode ? t(`firebase_auth_errors.${result.errorCode}`, t('error_updating_profile')) : t('error_updating_profile');
+      const errorMessage = result.errorCode ? t(result.errorCode, t('error_updating_profile')) : t('error_updating_profile');
       toast({
         title: t("error_updating_profile"),
         description: errorMessage,

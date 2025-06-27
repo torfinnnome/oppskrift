@@ -4,8 +4,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
-import { db } from "@/firebase";
-import { collection, getDocs, doc, updateDoc, query, orderBy, deleteDoc } from "firebase/firestore";
+
 import type { User as AppUserType } from "@/types"; 
 import { useTranslation } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
@@ -50,29 +49,21 @@ export default function AdminUsersPage() {
   }, [currentUser, isAdmin, authLoading, router]);
 
   const fetchUsers = async () => {
-    if (!db) {
-      console.error("Firestore (db) is not initialized.");
-      toast({ title: t('error_generic_title'), description: "Firestore not available.", variant: "destructive" });
-      setIsLoadingUsers(false);
-      return;
-    }
     setIsLoadingUsers(true);
     try {
-      const usersCollectionRef = collection(db, "users");
-      const q = query(usersCollectionRef, orderBy("createdAt", "desc")); 
-      const querySnapshot = await getDocs(q);
-      const fetchedUsers = querySnapshot.docs.map(doc => {
-        const data = doc.data();
-        return {
-          uid: doc.id,
-          email: data.email,
-          displayName: data.displayName,
-          isApproved: data.isApproved,
-          roles: data.roles || ['user'],
-          createdAt: data.createdAt?.toDate ? data.createdAt.toDate().toISOString() : data.createdAt,
-        } as UserForAdmin;
-      });
-      setUsers(fetchedUsers);
+      const response = await fetch("/api/admin/users");
+      if (!response.ok) {
+        throw new Error("Failed to fetch users");
+      }
+      const fetchedUsers = await response.json();
+      setUsers(fetchedUsers.map((user: any) => ({
+        uid: user.id,
+        email: user.email,
+        displayName: user.displayName,
+        isApproved: user.isApproved,
+        roles: user.roles ? user.roles.split(',') : ['user'],
+        createdAt: user.createdAt,
+      })));
     } catch (error) {
       console.error("Error fetching users:", error);
       toast({ title: t('error_fetching_users_title'), description: t('error_fetching_users_desc'), variant: "destructive" });
@@ -88,14 +79,14 @@ export default function AdminUsersPage() {
   }, [isAdmin]);
 
   const handleApproveUser = async (userId: string) => {
-    if (!db) {
-      toast({ title: t('error_generic_title'), description: "Firestore not available.", variant: "destructive" });
-      return;
-    }
     setUpdatingUserId(userId);
     try {
-      const userDocRef = doc(db, "users", userId);
-      await updateDoc(userDocRef, { isApproved: true, updatedAt: new Date().toISOString() });
+      const response = await fetch(`/api/admin/users/${userId}/approve`, {
+        method: "PUT",
+      });
+      if (!response.ok) {
+        throw new Error("Failed to approve user");
+      }
       toast({ title: t('user_approved_successfully_title') });
       setUsers(prevUsers => prevUsers.map(u => u.uid === userId ? { ...u, isApproved: true } : u));
     } catch (error) {
@@ -107,7 +98,7 @@ export default function AdminUsersPage() {
   };
 
   const handleToggleAdminRole = async (userId: string, currentRoles: string[] = [], isCurrentlyAdmin: boolean) => {
-    if (!db || !currentUser || userId === currentUser.uid) { 
+    if (!currentUser || userId === currentUser.uid) { 
       toast({ title: t('error_generic_title'), description: t('cannot_change_own_admin_role'), variant: "destructive" });
       return;
     }
@@ -119,8 +110,14 @@ export default function AdminUsersPage() {
     if (!newRoles.includes('user')) newRoles.push('user');
 
     try {
-      const userDocRef = doc(db, "users", userId);
-      await updateDoc(userDocRef, { roles: newRoles, updatedAt: new Date().toISOString() });
+      const response = await fetch(`/api/admin/users/${userId}/toggle-admin`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ newRoles }),
+      });
+      if (!response.ok) {
+        throw new Error("Failed to toggle admin role");
+      }
       toast({ title: isCurrentlyAdmin ? t('admin_role_removed_title') : t('admin_role_granted_title') });
       setUsers(prevUsers => prevUsers.map(u => u.uid === userId ? { ...u, roles: newRoles } : u));
     } catch (error) {
@@ -132,14 +129,18 @@ export default function AdminUsersPage() {
   };
 
   const handleDeleteUser = async (userId: string, userEmail: string | null) => {
-     if (!db || !currentUser || userId === currentUser.uid) { 
+     if (!currentUser || userId === currentUser.uid) { 
       toast({ title: t('error_generic_title'), description: t('cannot_delete_own_account_admin'), variant: "destructive" });
       return;
     }
     setDeletingUserId(userId);
     try {
-      const userDocRef = doc(db, "users", userId);
-      await deleteDoc(userDocRef);
+      const response = await fetch(`/api/admin/users/${userId}/delete`, {
+        method: "DELETE",
+      });
+      if (!response.ok) {
+        throw new Error("Failed to delete user");
+      }
       toast({ 
         title: t('user_deleted_firestore_title'), 
         description: t('user_deleted_firestore_desc', { email: userEmail || 'N/A' }),
@@ -147,7 +148,7 @@ export default function AdminUsersPage() {
       });
       setUsers(prevUsers => prevUsers.filter(u => u.uid !== userId));
     } catch (error) {
-      console.error("Error deleting user from Firestore:", error);
+      console.error("Error deleting user from Prisma:", error);
       toast({ title: t('error_deleting_user_title'), description: t('error_generic_desc'), variant: "destructive" });
     } finally {
       setDeletingUserId(null);

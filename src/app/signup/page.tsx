@@ -3,7 +3,6 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -15,28 +14,22 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { toast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
 import { useState } from "react";
+import { signup } from "./actions";
 
 const signupSchemaFactory = (t: (key: string, params?: any) => string) => z.object({
   displayName: z.string().min(2, { message: t("name_min_length", {length: 2}) }).optional(),
   email: z.string().email({ message: t("invalid_email_format") }),
   password: z.string().min(6, { message: t("password_min_length", {length: 6}) }),
-  confirmPassword: z.string().min(6, {message: t("password_min_length", {length: 6})})
-}).refine(data => data.password === data.confirmPassword, {
-  message: t("passwords_do_not_match"),
-  path: ["confirmPassword"],
 });
-
 
 type SignupFormValues = z.infer<ReturnType<typeof signupSchemaFactory>>;
 
 export default function SignupPage() {
-  const { signUp } = useAuth(); // Changed from login to signUp
   const router = useRouter();
   const { t } = useTranslation();
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   const signupSchema = signupSchemaFactory(t);
-
 
   const form = useForm<SignupFormValues>({
     resolver: zodResolver(signupSchema),
@@ -44,19 +37,39 @@ export default function SignupPage() {
       displayName: "",
       email: "",
       password: "",
-      confirmPassword: "",
     },
   });
 
   const onSubmit = async (data: SignupFormValues) => {
     setIsSubmitting(true);
-    const result = await signUp(data.email, data.password, data.displayName);
+    const formData = new FormData();
+    formData.append("email", data.email);
+    formData.append("password", data.password);
+    if (data.displayName) {
+      formData.append("displayName", data.displayName);
+    }
+
+    const result = await signup(formData);
     setIsSubmitting(false);
 
     if (result.success) {
-      router.push("/"); // Firebase onAuthStateChanged will handle user state
+      toast({
+        title: t("signup_success_title"),
+        description: t("signup_success_description"),
+      });
+      router.push("/login");
     } else {
-      const errorMessage = result.errorCode ? t(`firebase_auth_errors.${result.errorCode}`, t('signup_failed_default')) : t('signup_failed_default');
+      let errorMessage = t("signup_failed_default");
+      if (result.error) {
+        switch (result.error) {
+          case "auth/email-already-in-use":
+            errorMessage = t("signup_failed_email_already_in_use");
+            break;
+          default:
+            errorMessage = t("signup_failed_default");
+            break;
+        }
+      }
       toast({
         title: t("signup_failed_title"),
         description: errorMessage,
@@ -113,19 +126,6 @@ export default function SignupPage() {
                       <Input type="password" placeholder="••••••••" {...field} />
                     </FormControl>
                     <FormMessage>{form.formState.errors.password && t(form.formState.errors.password.message as string)}</FormMessage>
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="confirmPassword"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{t('confirm_password')}</FormLabel>
-                    <FormControl>
-                      <Input type="password" placeholder="••••••••" {...field} />
-                    </FormControl>
-                    <FormMessage>{form.formState.errors.confirmPassword && t(form.formState.errors.confirmPassword.message as string)}</FormMessage>
                   </FormItem>
                 )}
               />

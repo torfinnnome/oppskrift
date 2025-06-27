@@ -1,28 +1,33 @@
 "use client";
 
 import React, { type ReactNode } from "react";
-import { AuthProvider } from "@/contexts/AuthContext";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import { RecipeProvider } from "@/contexts/RecipeContext";
 import { ShoppingListProvider } from "@/contexts/ShoppingListContext";
 import { Toaster } from "@/components/ui/toaster";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { SessionProvider } from "next-auth/react";
+import { AuthProvider } from "@/contexts/AuthContext";
 
 const queryClient = new QueryClient();
 
-export function AppProviders({ children }: { children: ReactNode }) {
+import { Session } from "next-auth";
+
+export function AppProviders({ children, session }: { children: ReactNode; session: Session | null }) {
   return (
-    <QueryClientProvider client={queryClient}>
-      <LanguageProvider>
-        <AuthProvider>
+    <SessionProvider session={session}>
+      <QueryClientProvider client={queryClient}>
+        <LanguageProvider>
           <RecipeProvider>
             <ShoppingListProvider>
-              {children}
+              <AuthProvider>
+                {children}
+              </AuthProvider>
               <Toaster />
             </ShoppingListProvider>
           </RecipeProvider>
-        </AuthProvider>
-      </LanguageProvider>
-    </QueryClientProvider>
+        </LanguageProvider>
+      </QueryClientProvider>
+    </SessionProvider>
   );
 }

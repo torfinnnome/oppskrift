@@ -3,7 +3,6 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -15,16 +14,16 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { toast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
 import { useState } from "react";
+import { signIn } from "next-auth/react";
 
 const loginSchema = z.object({
   email: z.string().email({ message: "invalid_email_format" }),
-  password: z.string().min(1, { message: "password_required" }), // Min 1 for login, Firebase handles length
+  password: z.string().min(1, { message: "password_required" }),
 });
 
 type LoginFormValues = z.infer<typeof loginSchema>;
 
 export default function LoginPage() {
-  const { logIn } = useAuth(); // Changed from login to logIn
   const router = useRouter();
   const { t } = useTranslation();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -39,13 +38,33 @@ export default function LoginPage() {
 
   const onSubmit = async (data: LoginFormValues) => {
     setIsSubmitting(true);
-    const result = await logIn(data.email, data.password);
+    const result = await signIn("credentials", {
+      redirect: false,
+      email: data.email,
+      password: data.password,
+      callbackUrl: "/", // Redirect to homepage after successful login
+    });
     setIsSubmitting(false);
 
-    if (result.success) {
-      router.push("/"); // Firebase onAuthStateChanged will handle user state
+    if (result?.ok) {
+      router.push("/");
     } else {
-      const errorMessage = result.errorCode ? t(`firebase_auth_errors.${result.errorCode}`, t('login_failed_default')) : t('login_failed_default');
+      let errorMessage = t("login_failed_default");
+      if (result?.error) {
+        // Map NextAuth errors to your translation keys
+        switch (result.error) {
+          case "CredentialsSignin":
+            errorMessage = t("login_failed_invalid_credentials");
+            break;
+          case "CallbackRouteError":
+            errorMessage = t("login_failed_callback_error");
+            break;
+          // Add more cases for other NextAuth errors if needed
+          default:
+            errorMessage = t("login_failed_default");
+            break;
+        }
+      }
       toast({
         title: t("login_failed_title"),
         description: errorMessage,

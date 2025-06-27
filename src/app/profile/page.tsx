@@ -60,8 +60,7 @@ export default function ProfilePage() {
       <Card className="shadow-lg">
         <CardHeader className="items-center text-center">
           <Avatar className="h-24 w-24 mb-4 ring-2 ring-primary ring-offset-2 ring-offset-background">
-            {/* Firebase doesn't have a default avatar URL like Vercel, so we rely on displayName/email for now */}
-            {/* Or consider a generic avatar / placeholder if displayName is null */}
+            
             <AvatarFallback className="text-3xl">{avatarFallback}</AvatarFallback>
           </Avatar>
           <CardTitle className="text-2xl">{user.displayName || t('user_profile')}</CardTitle>

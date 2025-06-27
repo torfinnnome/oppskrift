@@ -28,11 +28,11 @@ export function RecipeCard({ recipe }: RecipeCardProps) {
   const getRecipeHintForPlaceholder = (recipe: Recipe): string => {
     const hints: string[] = [];
     if (recipe.categories && recipe.categories.length > 0) {
-        hints.push(recipe.categories[0].split(" ")[0].toLowerCase());
+        hints.push(recipe.categories[0].name.split(" ")[0].toLowerCase());
     }
     if (recipe.tags && recipe.tags.length > 0) {
         if (hints.length < 2) {
-            hints.push(recipe.tags[0].split(" ")[0].toLowerCase());
+            hints.push(recipe.tags[0].name.split(" ")[0].toLowerCase());
         }
     }
 
@@ -101,21 +101,21 @@ export function RecipeCard({ recipe }: RecipeCardProps) {
         )}
         <div className="flex items-center gap-2 mb-2 flex-wrap">
           {recipe.categories?.slice(0, 1).map((category) => (
-            <Link key={category} href={`/?category=${encodeURIComponent(category)}`} passHref legacyBehavior>
+            <Link key={category.name} href={`/?category=${encodeURIComponent(category.name)}`} passHref legacyBehavior>
               <a className="no-underline flex items-center">
                 <Bookmark className="h-3 w-3 mr-1 text-primary/80" />
                 <Badge variant="secondary" className="text-xs cursor-pointer hover:bg-primary/10 hover:border-primary/50 border border-transparent transition-colors">
-                  {category}
+                  {category.name}
                 </Badge>
               </a>
             </Link>
           ))}
           {recipe.tags?.slice(0, 2).map((tag) => (
-             <Link key={tag} href={`/?tag=${encodeURIComponent(tag)}`} passHref legacyBehavior>
+             <Link key={tag.name} href={`/?tag=${encodeURIComponent(tag.name)}`} passHref legacyBehavior>
               <a className="no-underline flex items-center">
                 <Tag className="h-3 w-3 mr-1 text-accent/80" />
                 <Badge variant="outline" className="text-xs cursor-pointer hover:bg-accent/10 hover:border-accent/50 border border-transparent transition-colors">
-                  {tag}
+                  {tag.name}
                 </Badge>
               </a>
             </Link>
