@@ -66,8 +66,8 @@ const recipeFormSchemaFactory = (t: (key: string) => string) => z.object({
   ingredientGroups: z.array(ingredientGroupSchema).min(1, "ingredient_groups_min_length"),
   instructions: z.array(instructionStepSchema).min(1, "instructions_min_length_array"),
   tips: z.array(tipStepSchema).optional(),
-  tags: z.array(z.string()).optional(),
-  categories: z.array(z.string()).optional(),
+  tags: z.union([z.array(z.string()), z.string()]).optional(),
+  categories: z.union([z.array(z.string()), z.string()]).optional(),
   servingsValue: z.coerce.number().min(1, "servings_min_value"),
   servingsUnit: z.enum(['servings', 'pieces'], { errorMap: () => ({ message: t("servings_unit_required") }) }),
   prepTime: z.string().optional(),
@@ -770,10 +770,10 @@ export function RecipeForm({ initialData, isEditMode = false }: RecipeFormProps)
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField control={form.control} name="categories" render={({ field }) => (
-                <FormItem><FormLabel>{t('categories')} ({t('comma_separated')})</FormLabel><FormControl><Input placeholder={t('categories_placeholder')} {...field} value={field.value?.join(', ') || ''} onChange={(e) => field.onChange(e.target.value.split(',').map(s => s.trim()).filter(Boolean))} /></FormControl><FormMessage>{translateError(form.formState.errors.categories?.message)}</FormMessage></FormItem>
+                <FormItem><FormLabel>{t('categories')} ({t('comma_separated')})</FormLabel><FormControl><Input placeholder={t('categories_placeholder')} {...field} value={Array.isArray(field.value) ? field.value.join(', ') : field.value || ''} onChange={(e) => field.onChange(e.target.value)} /></FormControl><FormMessage>{translateError(form.formState.errors.categories?.message)}</FormMessage></FormItem>
               )} />
               <FormField control={form.control} name="tags" render={({ field }) => (
-                <FormItem><FormLabel>{t('tags')} ({t('comma_separated')})</FormLabel><FormControl><Input placeholder={t('tags_placeholder')} {...field} value={field.value?.join(', ') || ''} onChange={(e) => field.onChange(e.target.value.split(',').map(s => s.trim()).filter(Boolean))} /></FormControl><FormMessage>{translateError(form.formState.errors.tags?.message)}</FormMessage></FormItem>
+                <FormItem><FormLabel>{t('tags')} ({t('comma_separated')})</FormLabel><FormControl><Input placeholder={t('tags_placeholder')} {...field} value={Array.isArray(field.value) ? field.value.join(', ') : field.value || ''} onChange={(e) => field.onChange(e.target.value)} /></FormControl><FormMessage>{translateError(form.formState.errors.tags?.message)}</FormMessage></FormItem>
               )} />
             </div>
             <FormField control={form.control} name="isPublic" render={({ field }) => (

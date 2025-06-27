@@ -7,7 +7,7 @@ import { ShoppingListProvider } from "@/contexts/ShoppingListContext";
 import { Toaster } from "@/components/ui/toaster";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { SessionProvider } from "next-auth/react";
-import { AuthProvider } from "@/contexts/AuthContext";
+import { AuthWrapper } from "@/providers/AuthWrapper";
 
 const queryClient = new QueryClient();
 
@@ -24,9 +24,9 @@ export function AppProviders({ children, session }: { children: ReactNode; sessi
           <LanguageProvider>
             <RecipeProvider>
               <ShoppingListProvider>
-                <AuthProvider>
+                <AuthWrapper>
                   {children}
-                </AuthProvider>
+                </AuthWrapper>
                 <Toaster />
               </ShoppingListProvider>
             </RecipeProvider>

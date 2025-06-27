@@ -29,7 +29,7 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export function AuthProvider({ children }: { children: ReactNode }) {
+export function AuthProvider({ children, t }: { children: ReactNode; t: (key: string) => string }) {
   const { data: session, status, update } = useSession();
   const [user, setUser] = useState<AppUserType | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -83,7 +83,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Update the session to reflect the new user data
       await update(); // This will refetch the session from the server
 
-      toast({ title: "Profile updated successfully!" });
+      toast({ title: t("profile_updated_successfully") });
       return { success: true };
     } catch (error) {
       console.error("Error updating user profile:", error);
