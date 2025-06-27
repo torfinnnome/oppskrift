@@ -26,6 +26,7 @@ model User {
   ratings          Rating[]
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
+  theme            String    @default("system")
 }
 
 model Recipe {

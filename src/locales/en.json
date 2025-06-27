@@ -404,7 +404,13 @@
   "cannot_delete_own_account_admin": "You cannot delete your own account from this interface.",
   "exported_content": "Exported Content",
   "copy_html_content": "Copy the HTML content below.",
-  "copy_markdown_content": "Copy the Markdown content below."
+  "copy_markdown_content": "Copy the Markdown content below.",
+  "theme": "Theme",
+  "theme_light": "Light",
+  "theme_dark": "Dark",
+  "theme_system": "System",
+  "theme_update_failed": "Theme update failed",
+  "theme_update_failed_desc": "Could not save your theme preference. Please try again."
 }
 
     

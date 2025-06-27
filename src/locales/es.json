@@ -404,7 +404,13 @@
   "cannot_delete_own_account_admin": "No puedes eliminar tu propia cuenta desde esta interfaz.",
   "exported_content": "Contenido Exportado",
   "copy_html_content": "Copia el contenido HTML a continuación.",
-  "copy_markdown_content": "Copia el contenido Markdown a continuación."
+  "copy_markdown_content": "Copia el contenido Markdown a continuación.",
+  "theme": "Tema",
+  "theme_light": "Claro",
+  "theme_dark": "Oscuro",
+  "theme_system": "Sistema",
+  "theme_update_failed": "Error al actualizar el tema",
+  "theme_update_failed_desc": "No se pudo guardar tu preferencia de tema. Por favor, inténtalo de nuevo."
 }
 
     

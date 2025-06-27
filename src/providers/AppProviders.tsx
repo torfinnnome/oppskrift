@@ -12,22 +12,27 @@ import { AuthProvider } from "@/contexts/AuthContext";
 const queryClient = new QueryClient();
 
 import { Session } from "next-auth";
+import { ThemeProvider } from "@/components/ThemeProvider";
 
 export function AppProviders({ children, session }: { children: ReactNode; session: Session | null }) {
+  const defaultTheme = session?.user?.theme || "light";
+
   return (
     <SessionProvider session={session}>
-      <QueryClientProvider client={queryClient}>
-        <LanguageProvider>
-          <RecipeProvider>
-            <ShoppingListProvider>
-              <AuthProvider>
-                {children}
-              </AuthProvider>
-              <Toaster />
-            </ShoppingListProvider>
-          </RecipeProvider>
-        </LanguageProvider>
-      </QueryClientProvider>
+      <ThemeProvider attribute="class" defaultTheme={defaultTheme} enableSystem>
+        <QueryClientProvider client={queryClient}>
+          <LanguageProvider>
+            <RecipeProvider>
+              <ShoppingListProvider>
+                <AuthProvider>
+                  {children}
+                </AuthProvider>
+                <Toaster />
+              </ShoppingListProvider>
+            </RecipeProvider>
+          </LanguageProvider>
+        </QueryClientProvider>
+      </ThemeProvider>
     </SessionProvider>
   );
 }

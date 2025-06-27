@@ -5,5 +5,5 @@ export interface User {
   displayName: string | null;
   isApproved?: boolean; // New field for approval status
   roles?: string[]; // Optional: for future role-based access
-  
+  theme?: string; // Add theme preference
 }

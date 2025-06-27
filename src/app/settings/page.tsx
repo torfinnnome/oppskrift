@@ -9,6 +9,7 @@ import { useTranslation } from "@/lib/i18n";
 import { useSession } from "next-auth/react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button"; 
@@ -164,6 +165,12 @@ export default function SettingsPage() {
             <Label htmlFor="language-switcher-container" className="text-base font-medium">{t('language')}</Label>
             <div id="language-switcher-container">
               <LanguageSwitcher />
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="theme-toggle-container" className="text-base font-medium">{t('theme')}</Label>
+            <div id="theme-toggle-container">
+              <ThemeToggle />
             </div>
             <p className="text-sm text-muted-foreground">{t('choose_display_language')}</p>
           </div>

@@ -404,7 +404,13 @@
   "cannot_delete_own_account_admin": "Du kan ikke slette din egen konto fra dette grensesnittet.",
   "exported_content": "Eksportert innhold",
   "copy_html_content": "Kopier HTML-innholdet nedenfor.",
-  "copy_markdown_content": "Kopier Markdown-innholdet nedenfor."
+  "copy_markdown_content": "Kopier Markdown-innholdet nedenfor.",
+  "theme": "Tema",
+  "theme_light": "Lys",
+  "theme_dark": "Mørk",
+  "theme_system": "System",
+  "theme_update_failed": "Temaoppdatering feilet",
+  "theme_update_failed_desc": "Kunne ikke lagre temapreferansen din. Vennligst prøv igjen."
 }
 
     
