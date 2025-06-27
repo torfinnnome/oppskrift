@@ -50,7 +50,7 @@ const suggestRecipeImageFlow = ai.defineFlow(
         },
       });
 
-      if (!media.url || !media.url.startsWith('data:')) {
+      if (!media || !media.url || !media.url.startsWith('data:')) {
           console.error('[suggestRecipeImageFlow] AI did not return a valid data URI for the image. Media object:', media);
           throw new Error('AI did not return a valid data URI for the image.');
       }
@@ -60,8 +60,8 @@ const suggestRecipeImageFlow = ai.defineFlow(
       // Let's check if the data URI string itself is > 700,000 characters (approx 700KB string, might be ~500KB data)
       // Firestore string field limit is ~1MB.
       
-      console.log(`[suggestRecipeImageFlow] Successfully generated image for title: "${input.recipeTitle}", Data URI length: ${media.url.length}`);
-      return {imageUri: media.url};
+      console.log(`[suggestRecipeImageFlow] Successfully generated image for title: "${input.recipeTitle}", Data URI length: ${media?.url?.length}`);
+      return {imageUri: media?.url || ''};
 
     } catch (error) {
       console.error('[suggestRecipeImageFlow] Error during image generation:', error);

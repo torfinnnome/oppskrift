@@ -66,14 +66,14 @@ const recipeFormSchemaFactory = (t: (key: string) => string) => z.object({
   ingredientGroups: z.array(ingredientGroupSchema).min(1, "ingredient_groups_min_length"),
   instructions: z.array(instructionStepSchema).min(1, "instructions_min_length_array"),
   tips: z.array(tipStepSchema).optional(),
-  tags: z.string().transform(val => val.split(',').map(tag => tag.trim()).filter(tag => tag !== "")).optional(),
-  categories: z.string().transform(val => val.split(',').map(cat => cat.trim()).filter(cat => cat !== "")).optional(),
+  tags: z.array(z.string()).optional(),
+  categories: z.array(z.string()).optional(),
   servingsValue: z.coerce.number().min(1, "servings_min_value"),
   servingsUnit: z.enum(['servings', 'pieces'], { errorMap: () => ({ message: t("servings_unit_required") }) }),
   prepTime: z.string().optional(),
   cookTime: z.string().optional(),
   imageUrl: z.string().optional(), 
-  sourceUrl: z.string().url({ message: t("invalid_url_format") }).optional().or(z.literal('')),
+  sourceUrl: z.string().url({ message: t("invalid_url_format") }).optional().or(z.literal("")),
   isPublic: z.boolean().default(true).optional(), // Default isPublic to true
 });
 
@@ -171,8 +171,8 @@ export function RecipeForm({ initialData, isEditMode = false }: RecipeFormProps)
           ...initialData,
           servingsValue: initialData.servingsValue || (initialData as any).servings || 1,
           servingsUnit: initialData.servingsUnit || 'servings',
-          tags: initialData.tags?.map(tag => typeof tag === 'string' ? tag : tag.name).join(", ") || "",
-          categories: initialData.categories?.map(cat => typeof cat === 'string' ? cat : cat.name).join(", ") || "",
+          tags: initialData.tags?.map(tag => typeof tag === 'string' ? tag : tag.name) || [],
+          categories: initialData.categories?.map(cat => typeof cat === 'string' ? cat : cat.name) || [],
           ingredientGroups: Array.isArray(initialData.ingredientGroups) && initialData.ingredientGroups.length > 0
             ? initialData.ingredientGroups.map(group => ({
                 ...group,
@@ -215,8 +215,8 @@ export function RecipeForm({ initialData, isEditMode = false }: RecipeFormProps)
           ingredientGroups: [defaultIngredientGroup(t)],
           instructions: [defaultInstructionStep()],
           tips: [],
-          tags: "",
-          categories: "",
+          tags: [],
+          categories: [],
           servingsValue: 4,
           servingsUnit: 'servings',
           prepTime: "",
@@ -434,8 +434,8 @@ export function RecipeForm({ initialData, isEditMode = false }: RecipeFormProps)
       servingsUnit: parsedData.servingsUnit || 'servings',
       prepTime: parsedData.prepTime || "",
       cookTime: parsedData.cookTime || "",
-      tags: parsedData.tags || "",
-      categories: parsedData.categories || "",
+      tags: typeof parsedData.tags === 'string' ? parsedData.tags.split(',').map((tag: string) => tag.trim()).filter(Boolean) : [],
+      categories: typeof parsedData.categories === 'string' ? parsedData.categories.split(',').map((cat: string) => cat.trim()).filter(Boolean) : [],
       imageUrl: parsedData.extractedImageUrl || "",
       sourceUrl: parsedData.sourceUrl || "",
       isPublic: form.getValues("isPublic") // Keep existing isPublic, or default to true
@@ -517,7 +517,7 @@ export function RecipeForm({ initialData, isEditMode = false }: RecipeFormProps)
     const recipePayloadBase = {
       ...data, servingsValue: Number(data.servingsValue), servingsUnit: data.servingsUnit as ServingsUnit,
       ingredientGroups: payloadIngredientGroups, instructions: payloadInstructionSteps, tips: payloadTipSteps,
-      sourceUrl: data.sourceUrl || null, 
+      sourceUrl: data.sourceUrl || undefined, 
       isPublic: data.isPublic === undefined ? true : data.isPublic, // Ensure isPublic has a value
       tags: Array.isArray(data.tags) ? data.tags : (data.tags?.split(',').map(tag => tag.trim()).filter(tag => tag) || []),
       categories: Array.isArray(data.categories) ? data.categories : (data.categories?.split(',').map(cat => cat.trim()).filter(cat => cat) || []),
@@ -770,10 +770,10 @@ export function RecipeForm({ initialData, isEditMode = false }: RecipeFormProps)
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField control={form.control} name="categories" render={({ field }) => (
-                <FormItem><FormLabel>{t('categories')} ({t('comma_separated')})</FormLabel><FormControl><Input placeholder={t('categories_placeholder')} {...field} value={Array.isArray(field.value) ? field.value.join(', ') : field.value || ''} onChange={(e) => field.onChange(e.target.value)} /></FormControl><FormMessage>{translateError(form.formState.errors.categories?.message)}</FormMessage></FormItem>
+                <FormItem><FormLabel>{t('categories')} ({t('comma_separated')})</FormLabel><FormControl><Input placeholder={t('categories_placeholder')} {...field} value={field.value?.join(', ') || ''} onChange={(e) => field.onChange(e.target.value.split(',').map(s => s.trim()).filter(Boolean))} /></FormControl><FormMessage>{translateError(form.formState.errors.categories?.message)}</FormMessage></FormItem>
               )} />
               <FormField control={form.control} name="tags" render={({ field }) => (
-                <FormItem><FormLabel>{t('tags')} ({t('comma_separated')})</FormLabel><FormControl><Input placeholder={t('tags_placeholder')} {...field} value={Array.isArray(field.value) ? field.value.join(', ') : field.value || ''} onChange={(e) => field.onChange(e.target.value)} /></FormControl><FormMessage>{translateError(form.formState.errors.tags?.message)}</FormMessage></FormItem>
+                <FormItem><FormLabel>{t('tags')} ({t('comma_separated')})</FormLabel><FormControl><Input placeholder={t('tags_placeholder')} {...field} value={field.value?.join(', ') || ''} onChange={(e) => field.onChange(e.target.value.split(',').map(s => s.trim()).filter(Boolean))} /></FormControl><FormMessage>{translateError(form.formState.errors.tags?.message)}</FormMessage></FormItem>
               )} />
             </div>
             <FormField control={form.control} name="isPublic" render={({ field }) => (

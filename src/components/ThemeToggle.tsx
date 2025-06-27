@@ -20,7 +20,7 @@ export function ThemeToggle() {
   const { user, updateUserProfile } = useAuth()
   const { t } = useTranslation()
 
-  const handleThemeChange = async (newTheme: "light" | "dark" | "system") => {
+  const handleThemeChange = async (newTheme: "light" | "dark") => {
     setTheme(newTheme)
     if (user) {
       const result = await updateUserProfile({ theme: newTheme })
@@ -49,9 +49,6 @@ export function ThemeToggle() {
         </DropdownMenuItem>
         <DropdownMenuItem onClick={() => handleThemeChange("dark")}>
           {t("theme_dark")}
-        </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => handleThemeChange("system")}>
-          {t("theme_system")}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

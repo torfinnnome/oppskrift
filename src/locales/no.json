@@ -408,7 +408,7 @@
   "theme": "Tema",
   "theme_light": "Lys",
   "theme_dark": "Mørk",
-  "theme_system": "System",
+  
   "theme_update_failed": "Temaoppdatering feilet",
   "theme_update_failed_desc": "Kunne ikke lagre temapreferansen din. Vennligst prøv igjen."
 }

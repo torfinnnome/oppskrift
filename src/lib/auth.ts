@@ -32,6 +32,7 @@ export const authOptions: NextAuthOptions = {
             name: user.displayName,
             isApproved: user.isApproved,
             roles: user.roles?.split(',') || ['user'],
+            theme: user.theme || 'dark',
           };
         }
         return null;
@@ -45,8 +46,8 @@ export const authOptions: NextAuthOptions = {
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
-        token.isApproved = (user as any).isApproved;
-        token.roles = (user as any).roles;
+        token.isApproved = user.isApproved;
+        token.roles = user.roles;
       }
       return token;
     },

@@ -408,7 +408,7 @@
   "theme": "Tema",
   "theme_light": "Claro",
   "theme_dark": "Oscuro",
-  "theme_system": "Sistema",
+  
   "theme_update_failed": "Error al actualizar el tema",
   "theme_update_failed_desc": "No se pudo guardar tu preferencia de tema. Por favor, inténtalo de nuevo."
 }

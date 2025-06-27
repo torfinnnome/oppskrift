@@ -9,7 +9,7 @@ export async function GET(
   req: Request,
   context: { params: { id: string } }
 ) {
-  const { id } = await context.params;
+  const { id } = context.params;
   const recipe = await prisma.recipe.findUnique({
     where: { id },
     
@@ -62,7 +62,7 @@ export async function PUT(
   req: Request,
   context: { params: { id: string } }
 ) {
-  const { id } = await context.params;
+  const { id } = context.params;
   const session = await getServerSession(authOptions);
   if (!session) {
     return new NextResponse("Unauthorized", { status: 401 });
@@ -190,7 +190,7 @@ export async function DELETE(
   req: Request,
   context: { params: { id: string } }
 ) {
-  const { id } = await context.params;
+  const { id } = context.params;
   const session = await getServerSession(authOptions);
   if (!session) {
     return new NextResponse("Unauthorized", { status: 401 });

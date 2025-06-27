@@ -7,7 +7,7 @@ export async function PUT(
   req: NextRequest,
   context: { params: { id: string } }
 ) {
-  const { id: userId } = await context.params;
+  const { id: userId } = context.params;
   const session = await getServerSession(authOptions);
 
   // Check if the user is authenticated and has admin role

@@ -7,7 +7,7 @@ export async function POST(
   req: Request,
   context: { params: { id: string } }
 ) {
-  const { id: recipeId } = await context.params;
+  const { id: recipeId } = context.params;
   const session = await getServerSession(authOptions);
 
   if (!session) {
@@ -70,7 +70,7 @@ export async function POST(
     });
 
     const numRatings = ratings.length;
-    const totalRating = ratings.reduce((sum, r) => sum + r.value, 0);
+    const totalRating = ratings.reduce((sum: number, r: { value: number }) => sum + r.value, 0);
     const averageRating = numRatings > 0 ? totalRating / numRatings : 0;
 
     await prisma.recipe.update({

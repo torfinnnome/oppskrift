@@ -19,7 +19,7 @@ export function AppProviders({ children, session }: { children: ReactNode; sessi
 
   return (
     <SessionProvider session={session}>
-      <ThemeProvider attribute="class" defaultTheme={defaultTheme} enableSystem>
+      <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
         <QueryClientProvider client={queryClient}>
           <LanguageProvider>
             <RecipeProvider>

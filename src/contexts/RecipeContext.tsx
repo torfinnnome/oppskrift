@@ -14,7 +14,7 @@ interface RecipeContextType {
   updateRecipe: (recipe: Recipe) => Promise<void>;
   deleteRecipe: (recipeId: string) => Promise<void>;
   getRecipeById: (recipeId: string) => Recipe | undefined;
-  submitRecipeRating: (recipeId: string, rating: number) => Promise<void>;
+  submitRecipeRating: (recipeId: string, userId: string, rating: number) => Promise<void>;
   loading: boolean;
   exportUserRecipes: () => Promise<{ success: boolean; error?: string }>;
   importRecipes: (jsonString: string) => Promise<{ success: boolean; count: number; error?: string }>;
@@ -34,7 +34,10 @@ export const RecipeProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   const { mutate } = useSWRConfig();
   const { language } = useLanguage();
 
-  const { data: recipes, error, isLoading } = useSWR<Recipe[]>("/api/recipes", fetcher);
+  const { data: recipes, error, isLoading } = useSWR<Recipe[]>(
+    session && session.user.isApproved ? "/api/recipes" : null,
+    fetcher
+  );
 
   const addRecipe = async (recipeData: Omit<Recipe, "id" | "createdAt" | "updatedAt">): Promise<Recipe> => {
     const response = await fetch("/api/recipes", {

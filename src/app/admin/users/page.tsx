@@ -57,7 +57,7 @@ export default function AdminUsersPage() {
       }
       const fetchedUsers = await response.json();
       setUsers(fetchedUsers.map((user: any) => ({
-        uid: user.id,
+        id: user.id,
         email: user.email,
         displayName: user.displayName,
         isApproved: user.isApproved,
@@ -88,7 +88,7 @@ export default function AdminUsersPage() {
         throw new Error("Failed to approve user");
       }
       toast({ title: t('user_approved_successfully_title') });
-      setUsers(prevUsers => prevUsers.map(u => u.uid === userId ? { ...u, isApproved: true } : u));
+      setUsers(prevUsers => prevUsers.map(u => u.id === userId ? { ...u, isApproved: true } : u));
     } catch (error) {
       console.error("Error approving user:", error);
       toast({ title: t('error_approving_user_title'), description: t('error_generic_desc'), variant: "destructive" });
@@ -98,7 +98,7 @@ export default function AdminUsersPage() {
   };
 
   const handleToggleAdminRole = async (userId: string, currentRoles: string[] = [], isCurrentlyAdmin: boolean) => {
-    if (!currentUser || userId === currentUser.uid) { 
+    if (!currentUser || userId === currentUser.id) { 
       toast({ title: t('error_generic_title'), description: t('cannot_change_own_admin_role'), variant: "destructive" });
       return;
     }
@@ -119,7 +119,7 @@ export default function AdminUsersPage() {
         throw new Error("Failed to toggle admin role");
       }
       toast({ title: isCurrentlyAdmin ? t('admin_role_removed_title') : t('admin_role_granted_title') });
-      setUsers(prevUsers => prevUsers.map(u => u.uid === userId ? { ...u, roles: newRoles } : u));
+      setUsers(prevUsers => prevUsers.map(u => u.id === userId ? { ...u, roles: newRoles } : u));
     } catch (error) {
       console.error("Error toggling admin role:", error);
       toast({ title: t('error_toggling_admin_role_title'), description: t('error_generic_desc'), variant: "destructive" });
@@ -129,7 +129,7 @@ export default function AdminUsersPage() {
   };
 
   const handleDeleteUser = async (userId: string, userEmail: string | null) => {
-     if (!currentUser || userId === currentUser.uid) { 
+     if (!currentUser || userId === currentUser.id) { 
       toast({ title: t('error_generic_title'), description: t('cannot_delete_own_account_admin'), variant: "destructive" });
       return;
     }
@@ -146,7 +146,7 @@ export default function AdminUsersPage() {
         description: t('user_deleted_firestore_desc', { email: userEmail || 'N/A' }),
         duration: 7000 
       });
-      setUsers(prevUsers => prevUsers.filter(u => u.uid !== userId));
+      setUsers(prevUsers => prevUsers.filter(u => u.id !== userId));
     } catch (error) {
       console.error("Error deleting user from Prisma:", error);
       toast({ title: t('error_deleting_user_title'), description: t('error_generic_desc'), variant: "destructive" });
@@ -211,10 +211,10 @@ export default function AdminUsersPage() {
               </TableHeader>
               <TableBody>
                 {users.map((user) => {
-                  const isCurrentUserAdmin = user.uid === currentUser?.uid;
+                  const isCurrentUserAdmin = user.id === currentUser?.id;
                   const targetUserIsAdmin = user.roles?.includes('admin') || false;
                   return (
-                    <TableRow key={user.uid}>
+                    <TableRow key={user.id}>
                       <TableCell className="font-medium break-all max-w-xs">{user.email}</TableCell>
                       <TableCell>{user.displayName || "N/A"}</TableCell>
                       <TableCell>
@@ -241,11 +241,11 @@ export default function AdminUsersPage() {
                       <TableCell className="text-right space-x-2 whitespace-nowrap">
                         {!user.isApproved && (
                           <Button
-                            size="sm"
-                            onClick={() => handleApproveUser(user.uid)}
-                            disabled={updatingUserId === user.uid || (isCurrentUserAdmin && user.uid === currentUser?.uid)}
+                              size="sm"
+                              onClick={() => handleApproveUser(user.id)}
+                              disabled={updatingUserId === user.id || (isCurrentUserAdmin && user.id === currentUser?.id)}
                           >
-                            {updatingUserId === user.uid ? (
+                            {updatingUserId === user.id ? (
                               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                             ) : (
                               <CheckCircle2 className="mr-2 h-4 w-4" />
@@ -258,10 +258,10 @@ export default function AdminUsersPage() {
                             <Button
                               size="sm"
                               variant={targetUserIsAdmin ? "destructive" : "outline"}
-                              onClick={() => handleToggleAdminRole(user.uid, user.roles, targetUserIsAdmin)}
-                              disabled={togglingAdminUserId === user.uid}
+                              onClick={() => handleToggleAdminRole(user.id, user.roles, targetUserIsAdmin)}
+                              disabled={togglingAdminUserId === user.id}
                             >
-                              {togglingAdminUserId === user.uid ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : (targetUserIsAdmin ? <ShieldX className="mr-2 h-4 w-4" /> : <ShieldCheck className="mr-2 h-4 w-4" />)}
+                              {togglingAdminUserId === user.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : (targetUserIsAdmin ? <ShieldX className="mr-2 h-4 w-4" /> : <ShieldCheck className="mr-2 h-4 w-4" />)}
                               {targetUserIsAdmin ? t('remove_admin_button') : t('make_admin_button')}
                             </Button>
                             <AlertDialog>
@@ -270,9 +270,9 @@ export default function AdminUsersPage() {
                                   size="sm"
                                   variant="destructive"
                                   className="bg-red-600 hover:bg-red-700"
-                                  disabled={deletingUserId === user.uid}
+                                  disabled={deletingUserId === user.id}
                                 >
-                                  {deletingUserId === user.uid ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <UserX className="mr-2 h-4 w-4" />}
+                                  {deletingUserId === user.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <UserX className="mr-2 h-4 w-4" />}
                                   {t('delete_user_button')}
                                 </Button>
                               </AlertDialogTrigger>
@@ -285,7 +285,7 @@ export default function AdminUsersPage() {
                                 </AlertDialogHeader>
                                 <AlertDialogFooter>
                                   <AlertDialogCancel>{t('cancel')}</AlertDialogCancel>
-                                  <AlertDialogAction onClick={() => handleDeleteUser(user.uid, user.email)} className="bg-destructive hover:bg-destructive/90">
+                                  <AlertDialogAction onClick={() => handleDeleteUser(user.id, user.email)} className="bg-destructive hover:bg-destructive/90">
                                     {t('delete_user_confirm_button')}
                                   </AlertDialogAction>
                                 </AlertDialogFooter>

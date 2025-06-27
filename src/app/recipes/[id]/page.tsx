@@ -193,7 +193,7 @@ function RecipeDetailPageContent() {
 
   const handleDeleteRecipe = async () => {
     if (!recipe?.id) return;
-    if (!user || (recipe.createdBy !== user.uid && !isAdmin)) {
+    if (!user || (recipe.createdBy !== user.id && !isAdmin)) {
       toast({ title: t('error_generic_title'), description: t('unauthorized_action'), variant: 'destructive' }); return;
     }
     try { await deleteRecipe(recipe.id); toast({ title: t('recipe_deleted_successfully') }); router.push("/"); }
@@ -251,12 +251,12 @@ function RecipeDetailPageContent() {
       toast({ title: t('must_be_logged_in_to_rate'), variant: "destructive" });
       return;
     }
-    if (!recipe.isPublic && recipe.createdBy !== user.uid) {
+    if (!recipe.isPublic && recipe.createdBy !== user.id) {
         toast({ title: t('unauthorized_action_rate_private'), variant: "destructive" });
         return;
     }
     try {
-      await submitRecipeRating(recipe.id, user.uid, newRating);
+      await submitRecipeRating(recipe.id, user.id, newRating);
       toast({ title: t('rating_submitted_successfully') });
     } catch (error: any) {
       toast({ title: t('error_submitting_rating'), description: error.message, variant: "destructive" });
@@ -269,13 +269,13 @@ function RecipeDetailPageContent() {
   }
   if (!recipe) return <div className="text-center py-10 text-xl text-muted-foreground">{t('recipe_not_found')}</div>;
 
-  const canEdit = (user && recipe.createdBy === user.uid) || isAdmin;
-  const canDelete = (user && recipe.createdBy === user.uid) || isAdmin;
+  const canEdit = (user && recipe.createdBy === user.id) || isAdmin;
+  const canDelete = (user && recipe.createdBy === user.id) || isAdmin;
   const anyExportInProgress = isExportingHtml || isExportingMarkdown;
 
   const displayServingsUnit = recipe.servingsUnit === 'pieces' ? t('servings_unit_pieces') : t('servings_unit_servings');
-  const canVoteOnRecipe = user && (recipe.isPublic || recipe.createdBy === user.uid);
-  const currentUserRating = user ? recipe.ratings?.find(r => r.userId === user.uid)?.value || 0 : 0;
+  const canVoteOnRecipe = user && (recipe.isPublic || recipe.createdBy === user.id);
+  const currentUserRating = user ? recipe.ratings?.find(r => r.userId === user.id)?.value || 0 : 0;
   
   const communityAverageRating = recipe.averageRating || 0;
   const communityNumRatings = recipe.numRatings || 0;

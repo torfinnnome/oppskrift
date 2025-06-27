@@ -38,7 +38,7 @@ export default function EditRecipePage() {
 
   useEffect(() => {
     if (recipeId && !recipesLoading && user) { 
-      if (!isUserApproved && getRecipeById(recipeId)?.createdBy === user.uid) {
+      if (!isUserApproved && getRecipeById(recipeId)?.createdBy === user.id) {
         // User owns the recipe but is not approved. For simplicity, block edit for now.
         // Or, allow edit but warn that it might not be visible based on their approval status.
         // For now, consistent with add: block if not approved.
@@ -48,7 +48,7 @@ export default function EditRecipePage() {
 
       const recipe = getRecipeById(recipeId);
       if (recipe) {
-        if (recipe.createdBy !== user.uid) { 
+        if (recipe.createdBy !== user.id) { 
           toast({ title: t("error_generic_title"), description: t("unauthorized_edit_recipe"), variant: "destructive" });
           setInitialData(null); 
           router.replace(`/recipes/${recipeId}`); 
@@ -73,7 +73,7 @@ export default function EditRecipePage() {
     );
   }
   
-  if (user && !isUserApproved && initialData === null && getRecipeById(recipeId)?.createdBy === user.uid) {
+  if (user && !isUserApproved && initialData === null && getRecipeById(recipeId)?.createdBy === user.id) {
     // This case means: user owns it, but they are not approved.
     return (
       <div className="max-w-xl mx-auto mt-10">

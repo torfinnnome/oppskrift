@@ -36,7 +36,7 @@ export default function DashboardPage() {
       <h1 className="text-3xl font-bold">{t('dashboard')}</h1>
       <Card>
         <CardHeader>
-          <CardTitle>{t('welcome_back', { name: user.name || user.email })}</CardTitle> {/* Add welcome_back key */}
+          <CardTitle>{t('welcome_back', { name: user.displayName || user.email })}</CardTitle> {/* Add welcome_back key */}
         </CardHeader>
         <CardContent>
           <p>{t('dashboard_content_placeholder')}</p> {/* Add dashboard_content_placeholder key */}

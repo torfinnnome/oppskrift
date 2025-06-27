@@ -6,17 +6,16 @@ import { authOptions } from "@/lib/auth";
 export async function GET() {
   const session = await getServerSession(authOptions);
 
-  let whereClause: any = { isPublic: true };
-
-  if (session) {
-    // If user is logged in, show all public recipes AND their own recipes (public or private)
-    whereClause = {
-      OR: [
-        { isPublic: true },
-        { createdBy: session.user.id },
-      ],
-    };
+  if (!session || !session.user.isApproved) {
+    return NextResponse.json([]);
   }
+
+  let whereClause: any = {
+    OR: [
+      { isPublic: true },
+      { createdBy: session.user.id },
+    ],
+  };
 
   const recipes = await prisma.recipe.findMany({
     where: whereClause,

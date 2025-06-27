@@ -60,7 +60,11 @@ function HomePageContent() {
   const filteredRecipes = useMemo(() => {
     let currentRecipes = [...recipes]; 
 
-    if (session) { 
+    if (session) {
+      if (!session.user.isApproved) {
+        return []; // If user is logged in but not approved, show no recipes
+      }
+
       if (visibilityFilter === "my-all") {
         currentRecipes = currentRecipes.filter(recipe => recipe.createdBy === session.user.id);
       } else if (visibilityFilter === "my-public") {
@@ -70,8 +74,8 @@ function HomePageContent() {
       } else if (visibilityFilter === "community-public") {
         currentRecipes = currentRecipes.filter(recipe => recipe.createdBy !== session.user.id && recipe.isPublic);
       }
-    } else { 
-        return []; 
+    } else {
+        return [];
     }
 
     if (categoryFilter) {
@@ -99,7 +103,7 @@ function HomePageContent() {
   }, [recipes, session, visibilityFilter, categoryFilter, tagFilter, searchTerm]);
 
 
-  if (!session && status !== 'loading') {
+  if (status === 'unauthenticated') {
     return (
       <div className="flex flex-col items-center justify-center min-h-[calc(100vh-200px)] text-center">
         <BookOpen className="h-24 w-24 text-primary mb-6" />

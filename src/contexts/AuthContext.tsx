@@ -10,21 +10,7 @@ import React, {
 import { useSession, signOut } from "next-auth/react";
 import { User as NextAuthUser } from "next-auth";
 
-declare module "next-auth" {
-  interface Session {
-    user: NextAuthUser & {
-      id: string;
-      isApproved: boolean;
-      roles: string;
-      theme: string;
-    };
-  }
-  interface User {
-    isApproved: boolean;
-    roles: string;
-    theme: string;
-  }
-}
+
 import { User as AppUserType } from "@/types"; // Assuming your AppUserType is compatible
 import { toast } from "@/hooks/use-toast";
 
@@ -53,17 +39,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (session?.user) {
       // Map NextAuth user to AppUserType
+      const nextAuthUser = session.user as NextAuthUser & { isApproved: boolean; roles: string[]; theme: string; };
       const appUser: AppUserType = {
-        id: session.user.id || "", // Assuming 'id' is available from NextAuth session
-        email: session.user.email || null,
-        displayName: session.user.name || null,
-        isApproved: (session.user as any).isApproved || false, // Custom property
-        roles: (session.user as any).roles || ["user"], // Custom property
-        theme: (session.user as any).theme || "system", // Custom property
+        id: nextAuthUser.id || "", // Assuming 'id' is available from NextAuth session
+        email: nextAuthUser.email || null,
+        displayName: nextAuthUser.name || null,
+        isApproved: nextAuthUser.isApproved || false, // Custom property
+        roles: nextAuthUser.roles || ["user"], // Custom property
+        theme: nextAuthUser.theme || "dark", // Custom property
       };
       setUser(appUser);
-      setIsAdmin(appUser.roles.includes("admin"));
-      setIsUserApproved(appUser.isApproved);
+      setIsAdmin((appUser.roles || []).includes("admin"));
+      setIsUserApproved(!!appUser.isApproved);
     } else {
       setUser(null);
       setIsAdmin(false);
