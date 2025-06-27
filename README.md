@@ -53,17 +53,23 @@ To enable full functionality, especially AI-powered features, you may need to co
 # If not provided, AI features will be disabled.
 # Get your key from Google AI Studio: https://aistudio.google.com/app/apikey
 GEMINI_API_KEY=your_gemini_api_key_here
-```
 
-*   `GEMINI_API_KEY`: Your API key for accessing Google Gemini models. This is optional. If you do not provide this key, the AI-powered features (like AI-powered recipe import and image suggestions) will be disabled.
-*   `NEXTAUTH_SECRET`: A random string used to hash tokens, sign/encrypt cookies, and generate a key for the NextAuth.js. You can generate a strong secret using `openssl rand -base64 32` or `openssl rand -hex 32`.
-*   `NEXTAUTH_URL`: The base URL of your application (e.g., `http://localhost:3000` or `https://your-app.com`). This is used for callbacks and redirects.
-*   `EMAIL_SERVER_HOST`: The hostname or IP address of your SMTP server.
-*   `EMAIL_SERVER_PORT`: The port of your SMTP server (e.g., `587` for TLS/STARTTLS, `465` for SSL).
-*   `EMAIL_SERVER_SECURE`: Set to `true` if your SMTP server uses SSL/TLS (usually port 465), `false` otherwise (usually port 587 with STARTTLS).
-*   `EMAIL_SERVER_USER`: The username for authenticating with your SMTP server.
-*   `EMAIL_SERVER_PASSWORD`: The password for authenticating with your SMTP server.
-*   `EMAIL_FROM`: The email address that will appear as the sender for outgoing emails (e.g., password reset emails).
+# A random string used to hash tokens, sign/encrypt cookies, and generate a key for the NextAuth.js.
+# You can generate a strong secret using `openssl rand -base64 32` or `openssl rand -hex 32`.
+NEXTAUTH_SECRET=your_nextauth_secret_here
+
+# The base URL of your application (e.g., `http://localhost:3000` or `https://your-app.com`).
+# This is used for callbacks and redirects.
+NEXTAUTH_URL=http://localhost:3000
+
+# SMTP server configuration for sending emails (e.g., password reset emails).
+EMAIL_SERVER_HOST=your_smtp_host
+EMAIL_SERVER_PORT=587
+EMAIL_SERVER_SECURE=false
+EMAIL_SERVER_USER=your_smtp_username
+EMAIL_SERVER_PASSWORD=your_smtp_password
+EMAIL_FROM=noreply@example.com
+```
 
 
 ### Database Setup and Admin User Initialization
