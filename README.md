@@ -88,7 +88,4 @@ To set up the database and create the admin user:
 
 **Note:** If you ever need to reset your database (e.g., for development purposes), you can delete the `prisma/dev.db` file and run `npm install` again.
 
-
-
-
-    
+**Note on Hosting with Google Firebase:** If you are interested in hosting this application using Google Firebase infrastructure, please refer to `v1.0` of this repository, which was specifically designed for that environment.
