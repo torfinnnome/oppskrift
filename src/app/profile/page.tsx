@@ -6,7 +6,8 @@ import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { useTranslation } from "@/lib/i18n";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { getGravatarUrl } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
@@ -59,8 +60,7 @@ export default function ProfilePage() {
       </div>
       <Card className="shadow-lg">
         <CardHeader className="items-center text-center">
-          <Avatar className="h-24 w-24 mb-4 ring-2 ring-primary ring-offset-2 ring-offset-background">
-            
+          <Avatar className="h-24 w-24 mb-4 ring-2 ring-primary ring-offset-2 ring-offset-background" imageSrc={user.email ? getGravatarUrl(user.email, 96) : undefined}>
             <AvatarFallback className="text-3xl">{avatarFallback}</AvatarFallback>
           </Avatar>
           <CardTitle className="text-2xl">{user.displayName || t('user_profile')}</CardTitle>

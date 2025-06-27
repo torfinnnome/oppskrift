@@ -8,7 +8,8 @@ import { siteConfig } from "@/config/site";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { useTranslation } from "@/lib/i18n";
 import { Home, LogIn, LogOut, PlusCircle, UserPlus, UserCircle, Settings, ShoppingCart, UserCog } from "lucide-react";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { getGravatarUrl } from "@/lib/utils";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -65,7 +66,7 @@ export function Header() {
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="relative h-8 w-8 rounded-full">
-                  <Avatar className="h-8 w-8">
+                  <Avatar className="h-8 w-8" imageSrc={user.email ? getGravatarUrl(user.email) : undefined}>
                     <AvatarFallback>{avatarFallback}</AvatarFallback>
                   </Avatar>
                 </Button>
