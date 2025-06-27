@@ -24,6 +24,7 @@ Oppskrift is a modern, web-based application designed to help you manage your pe
 *   **Persistent Storage:** Recipe data is stored in an SQLite database. 
 *   **Import/Export:** Users can export their recipes to a JSON file and import recipes from a JSON file. HTML and Markdown export for individual and all user recipes.
 *   **Internationalization (i18n):** Supports multiple languages (English, Norwegian, Spanish).
+*   **Theming:** Supports light and dark themes, allowing users to personalize their experience.
 *   **Responsive Design:** Built with ShadCN UI components and Tailwind CSS for a clean experience on all devices.
 *   **Admin Functionality:** A designated admin user (defined in `prisma/seed.ts`) can delete any recipe in the system and approve new users.
 
