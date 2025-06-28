@@ -72,7 +72,7 @@ export async function PUT(
     where: { id: id },
   });
 
-  if (recipe?.createdBy !== session.user.id) {
+  if (recipe?.createdBy !== session.user.id && !(session.user.roles as string[]).includes('admin')) {
     return new NextResponse("Forbidden", { status: 403 });
   }
 
@@ -200,7 +200,7 @@ export async function DELETE(
     where: { id: id },
   });
 
-  if (recipe?.createdBy !== session.user.id) {
+  if (recipe?.createdBy !== session.user.id && !(session.user.roles as string[]).includes('admin')) {
     return new NextResponse("Forbidden", { status: 403 });
   }
 

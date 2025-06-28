@@ -48,7 +48,7 @@ export default function EditRecipePage() {
 
       const recipe = getRecipeById(recipeId);
       if (recipe) {
-        if (recipe.createdBy !== user.id) { 
+        if (recipe.createdBy !== user.id && !(user.roles as string[])?.includes('admin')) { 
           toast({ title: t("error_generic_title"), description: t("unauthorized_edit_recipe"), variant: "destructive" });
           setInitialData(null); 
           router.replace(`/recipes/${recipeId}`); 
