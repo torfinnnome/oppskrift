@@ -2,6 +2,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import DOMPurify from "dompurify";
 import { useRouter } from "next/navigation";
 import { useForm, useFieldArray, type Control } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -620,7 +621,7 @@ export function RecipeForm({ initialData, isEditMode = false }: RecipeFormProps)
                 <CardContent className="space-y-3">
                     {imagePreview && (
                         <div className="relative group">
-                            <img src={imagePreview} alt={t('image_preview_alt')} className="rounded-md object-cover border w-full aspect-[16/9]" data-ai-hint="food cooking recipe"/>
+                            <img src={DOMPurify.sanitize(imagePreview)} alt={t('image_preview_alt')} className="rounded-md object-cover border w-full aspect-[16/9]" data-ai-hint="food cooking recipe"/>
                             <Button type="button" variant="destructive" size="icon" className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity" onClick={handleClearImage} aria-label={t('remove_image_button')}>
                                 <XCircle className="h-5 w-5"/>
                             </Button>
