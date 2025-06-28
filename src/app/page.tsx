@@ -29,7 +29,17 @@ const visibilityFilterOptions: { value: VisibilityFilter; labelKey: string; icon
 
 function HomePageContent() {
   const { recipes, loading: recipesLoading } = useRecipes();
-  const { data: session, status } = useSession();
+  const { data: session, status, update } = useSession();
+
+  const isUserApproved = session?.user?.isApproved;
+
+  useEffect(() => {
+    // Force a session update when the component mounts or session status changes
+    // This ensures the isApproved status is fresh
+    if (status === 'authenticated' && !isUserApproved) {
+      update();
+    }
+  }, [status, isUserApproved, update]);
 
   const { t } = useTranslation();
   const router = useRouter();
@@ -60,22 +70,20 @@ function HomePageContent() {
   const filteredRecipes = useMemo(() => {
     let currentRecipes = [...recipes]; 
 
-    if (session) {
-      if (!session.user.isApproved) {
-        return []; // If user is logged in but not approved, show no recipes
-      }
+    // If no session or user is not approved, show no recipes
+    if (!session || !isUserApproved) {
+      return []; 
+    }
 
-      if (visibilityFilter === "my-all") {
-        currentRecipes = currentRecipes.filter(recipe => recipe.createdBy === session.user.id);
-      } else if (visibilityFilter === "my-public") {
-        currentRecipes = currentRecipes.filter(recipe => recipe.createdBy === session.user.id && recipe.isPublic);
-      } else if (visibilityFilter === "my-private") {
-        currentRecipes = currentRecipes.filter(recipe => recipe.createdBy === session.user.id && !recipe.isPublic);
-      } else if (visibilityFilter === "community-public") {
-        currentRecipes = currentRecipes.filter(recipe => recipe.createdBy !== session.user.id && recipe.isPublic);
-      }
-    } else {
-        return [];
+    // Only approved and authenticated users proceed to this filtering
+    if (visibilityFilter === "my-all") {
+      currentRecipes = currentRecipes.filter(recipe => recipe.createdBy === session.user.id);
+    } else if (visibilityFilter === "my-public") {
+      currentRecipes = currentRecipes.filter(recipe => recipe.createdBy === session.user.id && recipe.isPublic);
+    } else if (visibilityFilter === "my-private") {
+      currentRecipes = currentRecipes.filter(recipe => recipe.createdBy === session.user.id && !recipe.isPublic);
+    } else if (visibilityFilter === "community-public") {
+      currentRecipes = currentRecipes.filter(recipe => recipe.createdBy !== session.user.id && recipe.isPublic);
     }
 
     if (categoryFilter) {
@@ -163,7 +171,7 @@ function HomePageContent() {
               </SelectContent>
             </Select>
           )}
-          {session && (
+          {session && isUserApproved && (
             <Button asChild className="w-full sm:w-auto">
               <Link href="/recipes/new">
                 <PlusCircle className="mr-2 h-4 w-4" /> {t('add_recipe')}
@@ -239,14 +247,14 @@ function HomePageContent() {
              activeFilterType === 'tag' && tagFilter ? t('no_recipes_found_for_tag', { tag: tagFilter }) :
              (session && visibilityFilter !== "all-viewable") ? t('no_recipes_found_for_visibility', { filter: t(visibilityFilterOptions.find(opt => opt.value === visibilityFilter)?.labelKey || 'current filter')}) :
              searchTerm ? t('no_recipes_found_for_search', { term: searchTerm }) :
-             (session.user.isApproved ? t('no_recipes_found_authenticated_user') : t('account_pending_approval_no_recipes'))}
+             (isUserApproved ? t('no_recipes_found_authenticated_user') : t('account_pending_approval_no_recipes'))}
           </p>
           {isAnyFilterActive && (
              <Button variant="link" onClick={handleClearFilters} className="mt-2">
                 {t('show_all_recipes')}
             </Button>
           )}
-           {!isAnyFilterActive && session.user.isApproved && (
+           {!isAnyFilterActive && isUserApproved && (
              <Button asChild className="mt-4">
               <Link href="/recipes/new">
                 <PlusCircle className="mr-2 h-4 w-4" /> {t('add_your_first_recipe_button')}

@@ -37,25 +37,45 @@ export function AuthProvider({ children, t }: { children: ReactNode; t: (key: st
   const loading = status === "loading";
 
   useEffect(() => {
-    if (session?.user) {
-      // Map NextAuth user to AppUserType
-      const nextAuthUser = session.user as NextAuthUser & { isApproved: boolean; roles: string[]; theme: string; };
-      const appUser: AppUserType = {
-        id: nextAuthUser.id || "", // Assuming 'id' is available from NextAuth session
-        email: nextAuthUser.email || null,
-        displayName: nextAuthUser.name || null,
-        isApproved: nextAuthUser.isApproved || false, // Custom property
-        roles: nextAuthUser.roles || ["user"], // Custom property
-        theme: nextAuthUser.theme || "dark", // Custom property
-      };
-      setUser(appUser);
-      setIsAdmin((appUser.roles || []).includes("admin"));
-      setIsUserApproved(!!appUser.isApproved);
-    } else {
-      setUser(null);
-      setIsAdmin(false);
-      setIsUserApproved(false);
-    }
+    const fetchUserApprovalStatus = async () => {
+      if (session?.user?.email) {
+        try {
+          const response = await fetch("/api/user/status");
+          if (response.ok) {
+            const data = await response.json();
+            // Map NextAuth user to AppUserType
+            const nextAuthUser = session.user as NextAuthUser & { isApproved: boolean; roles: string[]; theme: string; };
+            const appUser: AppUserType = {
+              id: nextAuthUser.id || "", // Assuming 'id' is available from NextAuth session
+              email: nextAuthUser.email || null,
+              displayName: nextAuthUser.name || null,
+              isApproved: data.isApproved, // Use the fetched status
+              roles: nextAuthUser.roles || ["user"], // Custom property
+              theme: nextAuthUser.theme || "dark", // Custom property
+            };
+            setUser(appUser);
+            setIsAdmin((appUser.roles || []).includes("admin"));
+            setIsUserApproved(!!appUser.isApproved);
+          } else {
+            console.error("Failed to fetch user approval status");
+            setUser(null);
+            setIsAdmin(false);
+            setIsUserApproved(false);
+          }
+        } catch (error) {
+          console.error("Error fetching user approval status:", error);
+          setUser(null);
+          setIsAdmin(false);
+          setIsUserApproved(false);
+        }
+      } else {
+        setUser(null);
+        setIsAdmin(false);
+        setIsUserApproved(false);
+      }
+    };
+
+    fetchUserApprovalStatus();
   }, [session]);
 
   const logOut = async () => {
