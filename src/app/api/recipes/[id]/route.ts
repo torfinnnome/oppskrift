@@ -98,27 +98,41 @@ export async function PUT(
     ...restOfRecipeData,
   };
 
-  // Handle Tags (many-to-many)
-  if (Array.isArray(tags)) {
-    updateData.tags = {
-      set: tags.map((tagName: string) => ({
-        name: tagName,
-      })),
-    };
-  }
-
-  // Handle Categories (many-to-many)
-  if (Array.isArray(categories)) {
-    updateData.categories = {
-      set: categories.map((categoryName: string) => ({
-        name: categoryName,
-      })),
-    };
-  }
+  
 
   // Use a transaction to ensure atomicity for deleting and recreating nested relations
   try {
     const updatedRecipe = await prisma.$transaction(async (tx) => {
+      // Handle Categories: Upsert categories to ensure they exist before connecting them.
+      if (Array.isArray(categories)) {
+        const categoryUpserts = categories.map((categoryName: string) =>
+          tx.category.upsert({
+            where: { name: categoryName },
+            update: {},
+            create: { name: categoryName },
+          })
+        );
+        await Promise.all(categoryUpserts);
+        updateData.categories = {
+          set: categories.map((categoryName: string) => ({ name: categoryName })),
+        };
+      }
+
+      // Handle Tags: Upsert tags to ensure they exist before connecting them.
+      if (Array.isArray(tags)) {
+        const tagUpserts = tags.map((tagName: string) =>
+          tx.tag.upsert({
+            where: { name: tagName },
+            update: {},
+            create: { name: tagName },
+          })
+        );
+        await Promise.all(tagUpserts);
+        updateData.tags = {
+          set: tags.map((tagName: string) => ({ name: tagName })),
+        };
+      }
+
       // 1. Delete existing related records for this recipe
       await tx.ingredientGroup.deleteMany({ where: { recipeId: id } });
       await tx.instructionStep.deleteMany({ where: { recipeId: id } });

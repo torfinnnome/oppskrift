@@ -31,9 +31,7 @@ export function RecipeCard({ recipe }: RecipeCardProps) {
         hints.push(recipe.categories[0].name.split(" ")[0].toLowerCase());
     }
     if (recipe.tags && recipe.tags.length > 0) {
-        if (hints.length < 2) {
-            hints.push(recipe.tags[0].name.split(" ")[0].toLowerCase());
-        }
+        hints.push(recipe.tags[0].name.split(" ")[0].toLowerCase());
     }
 
     if (hints.length === 0 && recipe.title) {
