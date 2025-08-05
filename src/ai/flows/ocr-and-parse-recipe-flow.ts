@@ -73,17 +73,50 @@ const ocrAndParseRecipeFlow = ai.defineFlow(
   },
   async (input: OcrAndParseRecipeInput) => {
     try {
-      // Step 1: Perform OCR on the image to extract text
-      const { text: ocrText } = await ai.generate({
-        model: 'googleai/gemini-2.0-flash', 
-        prompt: [
-          { text: "Extract all text from the following image. Present the text as clearly as possible for recipe parsing." },
-          { media: { url: input.imageDataUri } }
-        ],
-        config: {
-          temperature: 0.2, 
+      // Step 1: Perform OCR on the image to extract text, with retries for overload errors
+      let ocrText = '';
+      let lastError: any = null;
+      const maxRetries = 2; // Total attempts = 1 initial + 2 retries = 3
+
+      for (let attempt = 0; attempt <= maxRetries; attempt++) {
+        try {
+          const generationResult = await ai.generate({
+            model: 'googleai/gemini-2.0-flash',
+            prompt: [
+              { text: "Extract all text from the following image. Present the text as clearly as possible for recipe parsing." },
+              { media: { url: input.imageDataUri } }
+            ],
+            config: {
+              temperature: 0.2,
+            }
+          });
+          ocrText = generationResult.text;
+          lastError = null; // Clear error on success
+          break; // Exit loop on success
+        } catch (error) {
+          lastError = error;
+          // Check if it's a retryable "model overloaded" error (status 503)
+          if ((error as any)?.status === 503 && attempt < maxRetries) {
+            console.warn(`[ocrAndParseRecipeFlow] OCR attempt ${attempt + 1} failed due to model overload. Retrying...`);
+            // Wait for a short period before retrying
+            await new Promise(resolve => setTimeout(resolve, 1500 * (attempt + 1)));
+          } else {
+            // If it's not a retryable error or we've exhausted retries, break the loop
+            break;
+          }
         }
-      });
+      }
+
+      // If after all attempts lastError is still set, it means we failed permanently
+      if (lastError) {
+        console.error('[ocrAndParseRecipeFlow] OCR failed after multiple attempts.', lastError);
+        if ((lastError as any)?.status === 503) {
+          throw new Error('The recipe analysis service is currently overloaded. Please try again soon.');
+        }
+        // For other errors, rethrow the original error
+        throw lastError;
+      }
+
 
       if (!ocrText || ocrText.trim() === "") {
         throw new Error('AI did not extract any text from the image (OCR failed or image was empty).');
