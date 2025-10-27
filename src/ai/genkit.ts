@@ -1,7 +1,7 @@
 import {genkit} from 'genkit';
-import {googleAI} from '@genkit-ai/googleai';
+import {mistralAI} from '@genkit-ai/mistral';
 
 export const ai = genkit({
-  plugins: [googleAI()],
-  model: 'googleai/gemini-2.0-flash',
+  plugins: [mistralAI()],
+  model: 'mistral-large-latest',
 });
