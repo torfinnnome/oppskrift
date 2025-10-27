@@ -1,4 +1,3 @@
-
 'use server';
 
 /**
@@ -38,15 +37,28 @@ const suggestRecipeImageFlow = ai.defineFlow(
     outputSchema: SuggestRecipeImageOutputSchema,
   },
   async (input: SuggestRecipeImageInput) => {
-    // This is a simplified try...catch as the more detailed one was specific to API key issues
-    // which is not the case here. The error is a regional restriction.
+    // NOTE: Mistral AI does not currently offer image generation capabilities like Google Gemini.
+    // This function would need to be reimplemented using a different service for image generation.
+    // Options include:
+    // 1. OpenAI DALL-E
+    // 2. Stability AI
+    // 3. Replicate
+    // 4. Remove image generation and use placeholder images instead
+    
+    console.warn('[suggestRecipeImageFlow] Mistral AI does not support image generation. This feature needs to be reimplemented with an alternative service.');
+    
     try {
-      console.log(`[suggestRecipeImageFlow] Requesting image for title: "${input.recipeTitle}"`);
+      // For now, return a placeholder approach
+      // In a real implementation, you would integrate with a different image generation service
+      throw new Error('Image generation not available with Mistral AI. Please integrate with an alternative image generation service like OpenAI DALL-E, Stability AI, or use placeholder images.');
+      
+      /* 
+      // Example implementation with OpenAI DALL-E (uncomment and implement if using OpenAI):
       const {media} = await ai.generate({
-        model: 'googleai/gemini-2.0-flash-exp',
+        model: 'openai/dall-e-3',
         prompt: `IMPORTANT: Generate a PURELY VISUAL, LOW-RESOLUTION image (ABSOLUTELY NO TEXT, NO WORDS, NO LETTERS, NO TYPOGRAPHY) that represents the recipe titled: "${input.recipeTitle}". The image should be in landscape orientation, wider than it is tall, for example with a 16:9 aspect ratio. CRITICAL: The image MUST have a small file size, suitable for a data URI and ideally under 500KB.`,
         config: {
-          responseModalities: ['TEXT', 'IMAGE'], // Must provide both
+          responseModalities: ['TEXT', 'IMAGE'],
         },
       });
 
@@ -55,13 +67,9 @@ const suggestRecipeImageFlow = ai.defineFlow(
           throw new Error('AI did not return a valid data URI for the image.');
       }
       
-      // Approximate check for image size to provide a warning.
-      // Base64 string length is roughly 4/3 times the original data size.
-      // Let's check if the data URI string itself is > 700,000 characters (approx 700KB string, might be ~500KB data)
-      // Firestore string field limit is ~1MB.
-      
       console.log(`[suggestRecipeImageFlow] Successfully generated image for title: "${input.recipeTitle}", Data URI length: ${media?.url?.length}`);
       return {imageUri: media?.url || ''};
+      */
 
     } catch (error) {
       console.error('[suggestRecipeImageFlow] Error during image generation:', error);
@@ -70,4 +78,3 @@ const suggestRecipeImageFlow = ai.defineFlow(
     }
   }
 );
-

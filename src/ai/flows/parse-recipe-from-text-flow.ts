@@ -1,4 +1,3 @@
-
 'use server';
 /**
  * @fileOverview An AI agent that parses recipe text or a recipe URL
@@ -141,7 +140,11 @@ const parseRecipeFlow = ai.defineFlow(
   },
   async (input: ParseRecipeInput) => {
     try {
-      const { output } = await recipeParserPrompt(input);
+      const { output } = await recipeParserPrompt({
+        ...input,
+        // Add model specification for Mistral
+        model: 'mistral-large-latest'
+      });
       if (!output) {
         throw new Error('AI did not return structured recipe data.');
       }
@@ -157,4 +160,3 @@ const parseRecipeFlow = ai.defineFlow(
     }
   }
 );
-

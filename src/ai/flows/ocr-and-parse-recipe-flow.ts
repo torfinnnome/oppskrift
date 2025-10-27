@@ -1,4 +1,3 @@
-
 'use server';
 /**
  * @fileOverview An AI agent that performs OCR on an image and then parses the
@@ -81,7 +80,7 @@ const ocrAndParseRecipeFlow = ai.defineFlow(
       for (let attempt = 0; attempt <= maxRetries; attempt++) {
         try {
           const generationResult = await ai.generate({
-            model: 'googleai/gemini-2.0-flash',
+            model: 'mistral-large-latest',
             prompt: [
               { text: "Extract all text from the following image. Present the text as clearly as possible for recipe parsing." },
               { media: { url: input.imageDataUri } }
@@ -135,7 +134,7 @@ CRITICAL INSTRUCTIONS:
 1.  **ONLY EXTRACT FROM OCR TEXT:** Only extract information explicitly present in the provided OCR text.
 2.  **DO NOT INVENT OR MODIFY:** Do NOT invent, infer, add, or modify any information that is not directly found in the OCR text. Do not attempt to 'complete' or 'enhance' the recipe based on assumptions.
 3.  **ACCURACY IS PARAMOUNT:** Prioritize accuracy and fidelity to the OCR content above all else.
-4.  **OMIT IF NOT FOUND:** If information for a field is not present in the OCR text, omit the corresponding optional field or leave it empty according to the JSON schema. Do NOT guess or provide default values unless the schema description explicitly allows a default.
+4.  **OMIT IF NOT FOUND:** If information for a field is not present in the OCR text, omit the corresponding optional field or leave it empty according to the JSON schema. Do NOT guess or provide default values unless the schema description allows a default.
 
 Extracted OCR text:
 \`\`\`
@@ -192,4 +191,3 @@ Output JSON:
     }
   }
 );
-
