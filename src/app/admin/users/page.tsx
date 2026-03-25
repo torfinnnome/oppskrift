@@ -233,7 +233,7 @@ export default function AdminUsersPage() {
                           {user.roles?.map(role => (
                             <Badge key={role} variant={role === 'admin' ? 'destructive' : 'secondary'}>
                               {role === 'admin' && <UserCog className="mr-1 h-3.5 w-3.5" />}
-                              {t(`role_${role}`, role)}
+                              {t(`role_${role}`, { defaultValue: role })}
                             </Badge>
                           ))}
                         </div>

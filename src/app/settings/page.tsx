@@ -99,8 +99,9 @@ export default function SettingsPage() {
         const result = await importRecipes(jsonString);
         if (result.success) {
           toast({ title: t('recipes_imported_successfully_count', { count: result.count }) });
-          if (result.skippedCount && result.skippedCount > 0) {
-            toast({ title: t('recipes_skipped_duplicates', { count: result.skippedCount }), variant: "info" });
+          const skippedCount = (result as any).skippedCount;
+          if (skippedCount && skippedCount > 0) {
+            toast({ title: t('recipes_skipped_duplicates', { count: skippedCount }), variant: "default" });
           }
           updateSession(); // Re-fetch session after successful import
         } else {

@@ -520,21 +520,30 @@ export function RecipeForm({ initialData, isEditMode = false }: RecipeFormProps)
       ingredientGroups: payloadIngredientGroups, instructions: payloadInstructionSteps, tips: payloadTipSteps,
       sourceUrl: data.sourceUrl || undefined, 
       isPublic: data.isPublic === undefined ? true : data.isPublic, // Ensure isPublic has a value
-      tags: Array.isArray(data.tags) ? data.tags : (data.tags?.split(',').map(tag => tag.trim()).filter(tag => tag) || []),
-      categories: Array.isArray(data.categories) ? data.categories : (data.categories?.split(',').map(cat => cat.trim()).filter(cat => cat) || []),
+      tags: (Array.isArray(data.tags) ? data.tags : (data.tags?.split(',').map(tag => tag.trim()).filter(tag => tag) || [])).map(name => ({ name })),
+      categories: (Array.isArray(data.categories) ? data.categories : (data.categories?.split(',').map(cat => cat.trim()).filter(cat => cat) || [])).map(name => ({ name })),
       createdBy: initialData?.createdBy || session.user.id,
     };
     delete (recipePayloadBase as any).servings; 
     try {
       if (isEditMode && initialData?.id) {
         const updatedRecipeData: Recipe = {
-          ...initialData, ...recipePayloadBase, id: initialData.id,
-          updatedAt: new Date().toISOString(), createdAt: initialData.createdAt || new Date().toISOString(),
+          ...initialData, 
+          ...recipePayloadBase, 
+          id: initialData.id,
+          updatedAt: new Date().toISOString(), 
+          createdAt: initialData.createdAt || new Date().toISOString(),
+          numRatings: initialData.numRatings || 0,
+          averageRating: initialData.averageRating || 0,
         };
         await updateRecipe(updatedRecipeData);
         toast({ title: t('recipe_updated_successfully') }); router.push(`/recipes/${initialData.id}`);
       } else {
-        const newRecipeDataForAdd = { ...recipePayloadBase } as Omit<Recipe, 'id' | 'createdAt' | 'updatedAt'>;
+        const newRecipeDataForAdd = { 
+          ...recipePayloadBase,
+          numRatings: 0,
+          averageRating: 0,
+        } as Omit<Recipe, 'id' | 'createdAt' | 'updatedAt'>;
         const newRecipe = await addRecipe(newRecipeDataForAdd);
         toast({ title: t('recipe_added_successfully') }); router.push(`/recipes/${newRecipe.id}`);
       }

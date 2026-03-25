@@ -214,7 +214,7 @@ function RecipeDetailPageContent() {
 
   const handleExportHTML = async () => {
     if (!recipe?.id) return; setIsExportingHtml(true);
-    const result = await exportSingleRecipeAsHTML(recipe.id, currentLanguage);
+    const result = await exportSingleRecipeAsHTML(recipe.id);
     if (result.success && result.content) {
       setExportContent(result.content);
       setExportContentType("html");
@@ -226,7 +226,7 @@ function RecipeDetailPageContent() {
   };
   const handleExportMarkdown = async () => {
     if (!recipe?.id) return; setIsExportingMarkdown(true);
-    const result = await exportSingleRecipeAsMarkdown(recipe.id, currentLanguage);
+    const result = await exportSingleRecipeAsMarkdown(recipe.id);
     if (result.success && result.content) {
       setExportContent(result.content);
       setExportContentType("markdown");
@@ -327,9 +327,9 @@ function RecipeDetailPageContent() {
               <StarRating
                 rating={canVoteOnRecipe ? (currentUserRating || 0) : communityAverageRating}
                 onRate={canVoteOnRecipe ? handleRateRecipe : undefined}
-                interactive={canVoteOnRecipe}
+                interactive={!!canVoteOnRecipe}
                 size={24}
-                showTooltip={canVoteOnRecipe}
+                showTooltip={!!canVoteOnRecipe}
               />
               {(communityNumRatings > 0) && (
                 <span className="text-sm text-muted-foreground">

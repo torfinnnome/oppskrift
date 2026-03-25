@@ -62,6 +62,7 @@ export async function signup(formData: FormData) {
   });
 
   for (const admin of admins) {
+    if (!admin.email) continue;
     const adminUserManagementUrl = `${process.env.NEXTAUTH_URL}/admin/users`;
     await transporter.sendMail({
       from: process.env.EMAIL_FROM,

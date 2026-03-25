@@ -5,9 +5,9 @@ import { authOptions } from "@/lib/auth";
 
 export async function POST(
   req: Request,
-  context: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
-  const { id: recipeId } = context.params;
+  const { id: recipeId } = await context.params;
   const session = await getServerSession(authOptions);
 
   if (!session) {

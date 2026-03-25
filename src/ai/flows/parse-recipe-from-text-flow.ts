@@ -140,9 +140,7 @@ const parseRecipeFlow = ai.defineFlow(
   },
   async (input: ParseRecipeInput) => {
     try {
-      const { output } = await recipeParserPrompt({
-        ...input,
-        // Add model specification for Mistral
+      const { output } = await recipeParserPrompt(input, {
         model: 'mistral-large-latest'
       });
       if (!output) {

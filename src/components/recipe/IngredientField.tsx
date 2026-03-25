@@ -9,7 +9,7 @@ import { useTranslation } from "@/lib/i18n";
 import type { Control } from 'react-hook-form';
 import { FormField, FormItem, FormControl, FormMessage } from "@/components/ui/form";
 import { cn } from "@/lib/utils";
-import type { DraggableProvidedDraggableProps, DraggableProvidedDragHandleProps } from 'react-beautiful-dnd';
+import type { DraggableProvidedDraggableProps, DraggableProvidedDragHandleProps } from '@hello-pangea/dnd';
 import type { RecipeFormValues } from "./RecipeForm"; // Assuming RecipeFormValues is exported or defined appropriately
 
 interface IngredientFieldProps {

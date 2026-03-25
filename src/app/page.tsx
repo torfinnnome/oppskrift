@@ -181,7 +181,7 @@ function HomePageContent() {
         </div>
       </div>
       
-      {session && !session.user.isApproved && status !== 'loading' && (
+      {session && !session.user.isApproved && status === 'authenticated' && (
         <Alert variant="default" className="bg-yellow-50 border-yellow-300 text-yellow-700">
           <AlertTriangle className="h-5 w-5 text-yellow-600" />
           <AlertTitle className="font-semibold text-yellow-800">{t('account_pending_approval_title')}</AlertTitle>
@@ -198,19 +198,19 @@ function HomePageContent() {
           {categoryFilter && (
             <Badge variant="secondary" className="flex items-center gap-1">
               <Bookmark className="h-3 w-3" /> {t('category')}: {categoryFilter}
-              <Button variant="ghost" size="xs" onClick={() => router.push(tagFilter ? `/?tag=${tagFilter}` : "/")} className="ml-1 h-5 w-5 p-0.5"><XCircle className="h-3 w-3"/></Button>
+              <Button variant="ghost" size="sm" onClick={() => router.push(tagFilter ? `/?tag=${tagFilter}` : "/")} className="ml-1 h-5 w-5 p-0.5"><XCircle className="h-3 w-3"/></Button>
             </Badge>
           )}
           {tagFilter && (
             <Badge variant="outline" className="flex items-center gap-1">
               <Tag className="h-3 w-3" /> {t('tag')}: {tagFilter}
-              <Button variant="ghost" size="xs" onClick={() => router.push(categoryFilter ? `/?category=${categoryFilter}` : "/")} className="ml-1 h-5 w-5 p-0.5"><XCircle className="h-3 w-3"/></Button>
+              <Button variant="ghost" size="sm" onClick={() => router.push(categoryFilter ? `/?category=${categoryFilter}` : "/")} className="ml-1 h-5 w-5 p-0.5"><XCircle className="h-3 w-3"/></Button>
             </Badge>
           )}
           {session && visibilityFilter !== "all-viewable" && (
             <Badge variant="default" className="flex items-center gap-1">
               <ListFilter className="h-3 w-3" /> {t(visibilityFilterOptions.find(opt => opt.value === visibilityFilter)?.labelKey || 'Filter')}
-               <Button variant="ghost" size="xs" onClick={() => handleVisibilityChange('all-viewable')} className="ml-1 h-5 w-5 p-0.5 hover:bg-primary-foreground/20"><XCircle className="h-3 w-3"/></Button>
+               <Button variant="ghost" size="sm" onClick={() => handleVisibilityChange('all-viewable')} className="ml-1 h-5 w-5 p-0.5 hover:bg-primary-foreground/20"><XCircle className="h-3 w-3"/></Button>
             </Badge>
           )}
           

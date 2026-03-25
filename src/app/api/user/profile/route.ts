@@ -59,7 +59,7 @@ export async function PUT(req: NextRequest) {
   } catch (error) {
     console.error("Error updating user profile:", error);
     return NextResponse.json(
-      { message: "Error updating profile", error: error.message },
+      { message: "Error updating profile", error: (error as any).message },
       { status: 500 }
     );
   }

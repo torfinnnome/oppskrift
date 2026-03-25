@@ -107,7 +107,7 @@ export default function EditProfilePage() {
       });
       router.push("/profile");
     } else {
-      const errorMessage = result.errorCode ? t(result.errorCode, t('error_updating_profile')) : t('error_updating_profile');
+      const errorMessage = result.errorCode ? t(result.errorCode, { defaultValue: t('error_updating_profile') }) : t('error_updating_profile');
       toast({
         title: t("error_updating_profile"),
         description: errorMessage,

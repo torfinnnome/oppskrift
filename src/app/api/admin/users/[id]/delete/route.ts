@@ -5,9 +5,9 @@ import { prisma } from "@/lib/prisma";
 
 export async function DELETE(
   req: NextRequest,
-  context: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
-  const { id: userId } = context.params;
+  const { id: userId } = await context.params;
   const session = await getServerSession(authOptions);
 
   // Check if the user is authenticated and has admin role

@@ -4,7 +4,6 @@ import type {NextConfig} from 'next';
 const nextConfig: NextConfig = {
   /* config options here */
   experimental: {
-    allowedDevOrigins: ['YOUR-WEB-HOST'],
     serverActions: {
       bodySizeLimit: '10mb',
     },

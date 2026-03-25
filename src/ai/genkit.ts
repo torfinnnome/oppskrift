@@ -1,7 +1,7 @@
 import {genkit} from 'genkit';
-import {mistralAI} from '@genkit-ai/mistral';
+import {mistral} from 'genkitx-mistral';
 
 export const ai = genkit({
-  plugins: [mistralAI()],
+  plugins: [mistral()],
   model: 'mistral-large-latest',
 });
