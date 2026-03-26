@@ -9,6 +9,8 @@ import { Badge } from "@/components/ui/badge";
 import { Clock, Tag, Bookmark, Globe, Utensils, Star } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
+import { useRecipes } from "@/contexts/RecipeContext";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface RecipeCardProps {
   recipe: Recipe;
@@ -16,12 +18,24 @@ interface RecipeCardProps {
 
 export function RecipeCard({ recipe }: RecipeCardProps) {
   const { t } = useTranslation();
+  const { updateRecipe } = useRecipes();
+  const { user, isAdmin } = useAuth();
+
   // Use a 1x1 placeholder; the text "1x1" will be tiny.
   // The parent div will get a background color for a cleaner look.
   const defaultImage = "https://placehold.co/1x1.png"; 
   const imageUrl = recipe.imageUrl || defaultImage;
   const isDataUrl = imageUrl.startsWith('data:image');
   const isPlaceholder = imageUrl === defaultImage;
+
+  const handleImageError = () => {
+    // Only attempt to clear if it's not a data URL and not already the placeholder
+    // and if the user has permissions to update this recipe.
+    if (recipe.imageUrl && !isDataUrl && !isPlaceholder && ((user && recipe.createdBy === user.id) || isAdmin)) {
+      console.log(`Clearing broken image URL for recipe ${recipe.id}: ${recipe.imageUrl}`);
+      updateRecipe({ ...recipe, imageUrl: null });
+    }
+  };
 
   const displayServingsUnitShort = recipe.servingsUnit === 'pieces' ? t('pieces_short') : t('servings_short');
 
@@ -67,6 +81,7 @@ export function RecipeCard({ recipe }: RecipeCardProps) {
                 alt={recipe.title}
                 className="w-full h-full object-cover"
                 data-ai-hint={aiHint}
+                onError={handleImageError}
               />
             ) : (
               <NextImage
@@ -76,6 +91,7 @@ export function RecipeCard({ recipe }: RecipeCardProps) {
                 sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                 className="object-cover"
                 data-ai-hint={aiHint}
+                onError={handleImageError}
               />
             )}
             {recipe.isPublic && (

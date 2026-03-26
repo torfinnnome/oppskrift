@@ -77,7 +77,7 @@ function RecipeDetailPageContent() {
   const router = useRouter();
   const recipeId = params.id as string;
 
-  const { deleteRecipe, exportSingleRecipeAsHTML, exportSingleRecipeAsMarkdown, submitRecipeRating, loading: recipesLoadingFromContext } = useRecipes();
+  const { updateRecipe, deleteRecipe, exportSingleRecipeAsHTML, exportSingleRecipeAsMarkdown, submitRecipeRating, loading: recipesLoadingFromContext } = useRecipes();
   const { data: session, status } = useSession();
   const { addMultipleItems: addItemsToShoppingList } = useShoppingList();
   const { t, currentLanguage } = useTranslation();
@@ -85,6 +85,13 @@ function RecipeDetailPageContent() {
 
   const fetcher = (url: string) => fetch(url).then(res => res.json());
   const { data: recipe, error, isLoading: isLoadingRecipe } = useSWR<RecipeType>(`/api/recipes/${recipeId}`, fetcher);
+
+  const handleImageError = () => {
+    if (recipe && recipe.imageUrl && !recipe.imageUrl.startsWith('data:image') && ((user && recipe.createdBy === user.id) || isAdmin)) {
+      console.log(`Clearing broken image URL for recipe ${recipe.id}: ${recipe.imageUrl}`);
+      updateRecipe({ ...recipe, imageUrl: null });
+    }
+  };
 
   const [numServings, setNumServings] = useState(1);
   const [displayServingsInput, setDisplayServingsInput] = useState("1");
@@ -287,7 +294,27 @@ function RecipeDetailPageContent() {
       <Card className="overflow-hidden shadow-xl">
         {recipe.imageUrl && (
           <div className="relative w-full h-64 md:h-96">
-            {recipe.imageUrl.startsWith('data:image') ? <img src={recipe.imageUrl} alt={recipe.title} className="w-full h-full object-cover" data-ai-hint="food cooking dish"/> : <NextImage src={recipe.imageUrl} alt={recipe.title} fill sizes="100vw" className="object-cover" data-ai-hint="food cooking dish" priority />}
+            {recipe.imageUrl.startsWith('data:image') ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img 
+                src={recipe.imageUrl} 
+                alt={recipe.title} 
+                className="w-full h-full object-cover" 
+                data-ai-hint="food cooking dish"
+                onError={handleImageError}
+              />
+            ) : (
+              <NextImage 
+                src={recipe.imageUrl} 
+                alt={recipe.title} 
+                fill 
+                sizes="100vw" 
+                className="object-cover" 
+                data-ai-hint="food cooking dish" 
+                priority 
+                onError={handleImageError}
+              />
+            )}
           </div>
         )}
         <CardHeader className="pt-6">
