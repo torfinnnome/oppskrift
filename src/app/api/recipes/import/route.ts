@@ -61,19 +61,25 @@ export async function POST(req: NextRequest) {
 
       if (categories && Array.isArray(categories)) {
         dataToCreate.categories = {
-          connectOrCreate: categories.map((cat: string) => ({
-            where: { name: cat },
-            create: { name: cat },
-          })),
+          connectOrCreate: categories.map((cat: any) => {
+            const categoryName = typeof cat === 'string' ? cat : cat.name;
+            return {
+              where: { name: categoryName },
+              create: { name: categoryName },
+            };
+          }),
         };
       }
 
       if (tags && Array.isArray(tags)) {
         dataToCreate.tags = {
-          connectOrCreate: tags.map((tag: string) => ({
-            where: { name: tag },
-            create: { name: tag },
-          })),
+          connectOrCreate: tags.map((tag: any) => {
+            const tagName = typeof tag === 'string' ? tag : tag.name;
+            return {
+              where: { name: tagName },
+              create: { name: tagName },
+            };
+          }),
         };
       }
 

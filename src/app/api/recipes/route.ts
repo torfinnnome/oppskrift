@@ -79,16 +79,22 @@ export async function POST(req: Request) {
         })),
       },
       tags: {
-        connectOrCreate: tags.map((tag: string) => ({
-          where: { name: tag },
-          create: { name: tag },
-        })),
+        connectOrCreate: (tags || []).map((tag: any) => {
+          const tagName = typeof tag === 'string' ? tag : tag.name;
+          return {
+            where: { name: tagName },
+            create: { name: tagName },
+          };
+        }),
       },
       categories: {
-        connectOrCreate: categories.map((category: string) => ({
-          where: { name: category },
-          create: { name: category },
-        })),
+        connectOrCreate: (categories || []).map((category: any) => {
+          const categoryName = typeof category === 'string' ? category : category.name;
+          return {
+            where: { name: categoryName },
+            create: { name: categoryName },
+          };
+        }),
       },
     },
   });

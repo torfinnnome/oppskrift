@@ -105,31 +105,37 @@ export async function PUT(
     const updatedRecipe = await prisma.$transaction(async (tx) => {
       // Handle Categories: Upsert categories to ensure they exist before connecting them.
       if (Array.isArray(categories)) {
-        const categoryUpserts = categories.map((categoryName: string) =>
-          tx.category.upsert({
+        const categoryUpserts = categories.map((category: any) => {
+          const categoryName = typeof category === 'string' ? category : category.name;
+          return tx.category.upsert({
             where: { name: categoryName },
             update: {},
             create: { name: categoryName },
-          })
-        );
+          });
+        });
         await Promise.all(categoryUpserts);
         updateData.categories = {
-          set: categories.map((categoryName: string) => ({ name: categoryName })),
+          set: categories.map((category: any) => ({
+            name: typeof category === 'string' ? category : category.name
+          })),
         };
       }
 
       // Handle Tags: Upsert tags to ensure they exist before connecting them.
       if (Array.isArray(tags)) {
-        const tagUpserts = tags.map((tagName: string) =>
-          tx.tag.upsert({
+        const tagUpserts = tags.map((tag: any) => {
+          const tagName = typeof tag === 'string' ? tag : tag.name;
+          return tx.tag.upsert({
             where: { name: tagName },
             update: {},
             create: { name: tagName },
-          })
-        );
+          });
+        });
         await Promise.all(tagUpserts);
         updateData.tags = {
-          set: tags.map((tagName: string) => ({ name: tagName })),
+          set: tags.map((tag: any) => ({
+            name: typeof tag === 'string' ? tag : tag.name
+          })),
         };
       }
 
