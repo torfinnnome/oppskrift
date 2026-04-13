@@ -49,7 +49,7 @@ export interface Recipe {
   servingsUnit: ServingsUnit;
   prepTime?: string;
   cookTime?: string;
-  imageUrl?: string;
+  imageUrl?: string | null;
   sourceUrl?: string; // Added source URL
   isPublic?: boolean;
   createdBy?: string; // User ID
