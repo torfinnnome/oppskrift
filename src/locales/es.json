@@ -1,4 +1,3 @@
-
 {
   "app_title": "Oppskrift",
   "my_recipes": "Mis Recetas",
@@ -142,7 +141,7 @@
   "request_new_reset_link": "Solicitar un Nuevo Enlace de Restablecimiento",
   "reset_your_password": "Restablece Tu Contraseña",
   "reset_password_page_description": "Ingresa tu nueva contraseña abajo para {{email}}.",
-  "reset_password_page_description_firebase": "Ingresa tu nueva contraseña abajo.",
+  "reset_password_page_description_generic": "Ingresa tu nueva contraseña abajo.",
   "reset_password_button": "Restablecer Contraseña",
   "password_reset_success_title": "Restablecimiento de Contraseña Exitoso",
   "password_reset_success_desc": "Tu contraseña ha sido actualizada exitosamente. Ahora puedes iniciar sesión con tu nueva contraseña.",
@@ -180,7 +179,7 @@
   "error_deleting_recipe": "Error al eliminar la receta. Por favor, inténtalo de nuevo.",
   "image_processing_toast_title": "Procesando Imagen",
   "image_processing_toast_desc": "Redimensionando y preparando tu imagen...",
-  "image_still_too_large_error": "La imagen sugerida, incluso después de redimensionarla, es demasiado grande para guardarla. Intenta sugerir una imagen diferente o proporciona una más pequeña manually mediante URL.",
+  "image_still_too_large_error": "La imagen sugerida, incluso después de redimensionarla, es demasiado grande para guardarla. Intenta sugerir una imagen diferente o proporciona una más pequeña manualmente mediante URL.",
   "ingredients_reordered": "Ingredientes reordenados correctamente.",
   "filtering_by_tag": "Filtrando por etiqueta",
   "no_recipes_found_for_tag": "No se encontraron recetas para la etiqueta \"{{tag}}\".",
@@ -281,7 +280,7 @@
   "instruction_step_text_aria": "Texto del paso de instrucción {{stepNumber}}",
   "instruction_steps_reordered": "Pasos de instrucción reordenados.",
   "no_instructions_provided": "No se proporcionaron instrucciones para esta receta.",
-  "user_not_authenticated_or_firestore_not_initialized": "Usuario no autenticado o Firestore no inicializado.",
+  "user_not_authenticated": "Usuario no autenticado.",
   "error_updating_step_status": "Error al actualizar el estado de finalización del paso.",
   "toggle_step_completion_aria": "Alternar finalización para el paso {{stepNumber}}",
   "vote_singular": "voto",
@@ -333,7 +332,7 @@
   "ocr_max_size_info": "Máx. {{maxSize}}MB",
   "ocr_invalid_file_type": "Tipo de archivo inválido. Por favor, selecciona una imagen (ej: JPG, PNG, WEBP).",
   "upload_image_label": "Imagen de la Receta",
-  "upload_image_description": "Sube una imagen para tu receta.",
+  "upload_image_description": "Sube una imagen for your recipe.",
   "remove_image_button": "Eliminar Imagen",
   "image_preview_alt": "Vista previa de la imagen de la receta",
   "processing_image": "Procesando imagen...",
@@ -396,10 +395,10 @@
   "error_toggling_admin_role_title": "Error al Cambiar Rol de Admin",
   "cannot_change_own_admin_role": "No puedes cambiar tu propio rol de administrador desde esta interfaz.",
   "confirm_delete_user_title": "¿Eliminar Usuario {{email}}?",
-  "confirm_delete_user_desc_firestore_only": "Esto eliminará los datos del usuario (perfil, estado de aprobación) de la base de datos de la aplicación. NO ELIMINARÁ SU CUENTA DE INICIO DE SESIÓN de Firebase Authentication. Aún podrán iniciar sesión pero podrían encontrar problemas. Para una eliminación completa, elimínelos de Firebase Authentication en la Consola de Firebase.",
+  "confirm_delete_user_desc": "Esto eliminará los datos del usuario (perfil, estado de aprobación) de la base de datos de la aplicación.",
   "delete_user_confirm_button": "Eliminar Datos del Usuario",
-  "user_deleted_firestore_title": "Datos del Usuario Eliminados",
-  "user_deleted_desc": "Los datos del usuario para {{email}} han sido eliminados de la base de datos. Recuerda eliminar su cuenta del sistema de autenticación para una eliminación completa.",
+  "user_deleted_title": "Datos del Usuario Eliminados",
+  "user_deleted_desc": "Los datos del usuario para {{email}} han sido eliminados de la base de datos.",
   "error_deleting_user_title": "Error al Eliminar Datos del Usuario",
   "cannot_delete_own_account_admin": "No puedes eliminar tu propia cuenta desde esta interfaz.",
   "exported_content": "Contenido Exportado",
@@ -412,5 +411,3 @@
   "theme_update_failed": "Error al actualizar el tema",
   "theme_update_failed_desc": "No se pudo guardar tu preferencia de tema. Por favor, inténtalo de nuevo."
 }
-
-    

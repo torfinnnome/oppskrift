@@ -14,8 +14,6 @@ import { useTranslation } from "@/lib/i18n";
 import { toast } from "@/hooks/use-toast";
 import { Loader2, KeyRound } from "lucide-react";
 import Link from "next/link";
-// import { auth as firebaseAuth } from "@/firebase"; // Import Firebase auth
-// import { verifyPasswordResetCode, confirmPasswordReset } from "firebase/auth";
 
 const passwordResetSchemaFactory = (t: (key: string, params?: any) => string) => z.object({
   newPassword: z.string().min(6, { message: t("password_min_length", {length: 6}) }),
@@ -47,32 +45,6 @@ function ResetPasswordPageContent() {
     },
   });
 
-  // useEffect(() => {
-  //   async function checkToken() {
-  //     if (!oobCode) {
-  //       setTokenError(t("firebase_auth_errors.auth/missing-action-code", t("missing_reset_token")));
-  //       setIsLoadingToken(false);
-  //       setTokenVerified(false);
-  //       return;
-  //     }
-  //     try {
-  //       // Verify the password reset code. 
-  //       // This checks if the code is valid and not expired.
-  //       // It also returns the email of the user if the code is valid.
-  //       await verifyPasswordResetCode(firebaseAuth, oobCode);
-  //       setTokenVerified(true);
-  //     } catch (error: any) {
-  //       console.error("Firebase verifyPasswordResetCode error:", error);
-  //       setTokenError(t(`firebase_auth_errors.${error.code}`, t("invalid_or_expired_token")));
-  //       setTokenVerified(false);
-  //     } finally {
-  //       setIsLoadingToken(false);
-  //     }
-  //   }
-  //   checkToken();
-  // }, [oobCode, t]);
-
-  // Temporarily set tokenVerified to true for testing purposes
   useEffect(() => {
     if (token) {
       setTokenVerified(true);

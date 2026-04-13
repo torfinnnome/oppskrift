@@ -23,7 +23,7 @@ type ForgotPasswordFormValues = z.infer<ReturnType<typeof forgotPasswordSchemaFa
 
 export default function ForgotPasswordPage() {
   const { t } = useTranslation();
-  const { sendUserPasswordResetEmail } = useAuth(); // Get the Firebase method
+  const { sendUserPasswordResetEmail } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 

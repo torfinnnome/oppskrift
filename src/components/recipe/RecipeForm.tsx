@@ -323,7 +323,7 @@ export function RecipeForm({ initialData, isEditMode = false }: RecipeFormProps)
     try {
       toast({ title: t("image_processing_toast_title"), description: t("image_processing_toast_desc") });
       const resizedImageUri = await resizeDataUri(dataUri, MAX_IMAGE_WIDTH, IMAGE_QUALITY);
-      if (resizedImageUri.length > 1048487 * 0.95) { // Firestore string field limit is ~1MB. Check if data URI is close.
+      if (resizedImageUri.length > 1048487 * 0.95) { // Check if data URI is close to 1MB limit for performance/storage.
         setImageError(t("image_still_too_large_error"));
         toast({ title: t("image_upload_error_title"), description: t("image_still_too_large_error"), variant: "destructive" });
         form.setValue("imageUrl", ""); // Clear if too large

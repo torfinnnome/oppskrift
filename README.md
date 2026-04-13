@@ -12,14 +12,14 @@ Oppskrift is a modern, web-based application designed to help you manage your pe
 
 *   **Recipe Management:** Add, view, edit, and delete your personal recipes. Recipes can be marked as public (visible to all users, even unauthenticated) or private (visible only to the creator).
 *   **Rich Recipe Details:** Store ingredients, multi-step instructions, serving sizes, prep/cook times, categories, and tags.
-*   **AI-Powered Recipe Import (Text/URL):** Paste raw recipe text or a URL into the recipe form, and an AI agent (powered by Genkit) will attempt to parse the content and automatically populate the form fields. The AI uses the currently selected UI language as a guide for parsing.
-*   **AI-Powered Recipe Import (Image OCR):** Upload an image of a recipe (or drag-and-drop), and the AI will perform Optical Character Recognition (OCR) to extract text, then parse that text to populate the recipe form. This feature also uses the selected UI language to guide the AI.
-*   **AI-Powered Image Suggestions:** Get relevant image suggestions for your recipes based on their titles, powered by Genkit and Gemini. Images are stored as data URIs after client-side resizing. (Note: Image generation availability may be subject to regional restrictions by the model provider, as is currently the case for Norway/EU with `gemini-2.0-flash-exp`).
+*   **AI-Powered Recipe Import (Text/URL):** Paste raw recipe text or a URL into the recipe form, and an AI agent (powered by Genkit and Mistral AI) will attempt to parse the content and automatically populate the form fields. The AI uses the currently selected UI language as a guide for parsing.
+*   **AI-Powered Recipe Import (Image OCR):** Upload an image of a recipe (or drag-and-drop), and the AI will perform Optical Recognition (OCR) to extract text, then parse that text to populate the recipe form. This feature also uses the selected UI language to guide the AI.
+*   **AI-Powered Image Suggestions:** (Note: This feature is currently limited as Mistral AI does not natively support image generation. Re-implementation with a service like DALL-E or Stability AI is required for full functionality).
 *   **Star Rating System:** Users can rate public recipes (and owners their own private recipes) on a 1-5 star scale. Average ratings and vote counts are displayed. Users can also clear their vote.
 *   **Dynamic Ingredient Scaling:** Adjust serving sizes on the fly, and ingredient quantities will scale automatically.
 *   **Shopping List:** Add ingredients from recipes to a consolidated shopping list.
 *   **Filtering & Searching:** Easily find recipes by searching titles, descriptions, ingredients, categories, or tags. Filter by visibility (public, private, community).
-*   **User Authentication:** User accounts stored in a local SQLite database. Includes profile editing (name, email, password).
+*   **User Authentication:** User accounts stored in a local SQLite database via NextAuth.js. Includes profile editing (name, email, password).
 *   **User Approval System:** New users require admin approval before they can create recipes or rate others' public recipes.
 *   **Persistent Storage:** Recipe data is stored in an SQLite database. 
 *   **Import/Export:** Users can export their recipes to a JSON file and import recipes from a JSON file. HTML and Markdown export for individual and all user recipes.
@@ -33,7 +33,7 @@ Oppskrift is a modern, web-based application designed to help you manage your pe
 *   **Frontend:** Next.js (App Router), React, TypeScript
 *   **Styling:** Tailwind CSS, ShadCN UI
 *   **Backend & Database:** NextAuth.js, Prisma (SQLite)
-*   **AI Integration:** Genkit (using Google Gemini models)
+*   **AI Integration:** Genkit (using Mistral AI models)
 *   **Internationalization:** `i18next` pattern with JSON locale files (adapted for a simpler context-based approach).
 *   **Drag & Drop:** `@hello-pangea/dnd` for reordering ingredients and steps.
 
@@ -50,10 +50,10 @@ To enable full functionality, especially AI-powered features, you may need to co
 ```
 # .env.local
 
-# Optional: Your Google Gemini API Key for AI features (e.g., recipe parsing, image suggestions).
+# Optional: Your Mistral AI API Key for AI features (e.g., recipe parsing).
 # If not provided, AI features will be disabled.
-# Get your key from Google AI Studio: https://aistudio.google.com/app/apikey
-GEMINI_API_KEY=your_gemini_api_key_here
+# Get your key from Mistral AI Console: https://console.mistral.ai/
+MISTRAL_API_KEY=your_mistral_api_key_here
 
 # A random string used to hash tokens, sign/encrypt cookies, and generate a key for the NextAuth.js.
 # You can generate a strong secret using `openssl rand -base64 32` or `openssl rand -hex 32`.

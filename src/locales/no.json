@@ -1,4 +1,3 @@
-
 {
   "app_title": "Oppskrift",
   "my_recipes": "Mine oppskrifter",
@@ -142,7 +141,7 @@
   "request_new_reset_link": "Be om ny tilbakestillingslenke",
   "reset_your_password": "Tilbakestill ditt passord",
   "reset_password_page_description": "Skriv inn ditt nye passord nedenfor for {{email}}.",
-  "reset_password_page_description_firebase": "Skriv inn ditt nye passord nedenfor.",
+  "reset_password_page_description_generic": "Skriv inn ditt nye passord nedenfor.",
   "reset_password_button": "Tilbakestill passord",
   "password_reset_success_title": "Passord tilbakestilt",
   "password_reset_success_desc": "Passordet ditt er blitt oppdatert. Du kan nå logge inn med ditt nye passord.",
@@ -281,7 +280,7 @@
   "instruction_step_text_aria": "Tekst for instruksjonstrinn {{stepNumber}}",
   "instruction_steps_reordered": "Instruksjonstrinn omorganisert.",
   "no_instructions_provided": "Ingen instruksjoner gitt for denne oppskriften.",
-  "user_not_authenticated_or_firestore_not_initialized": "Bruker ikke autentisert eller Firestore ikke initialisert.",
+  "user_not_authenticated": "Bruker ikke autentisert.",
   "error_updating_step_status": "Feil ved oppdatering av fullføringsstatus for trinn.",
   "toggle_step_completion_aria": "Veksle fullføring for trinn {{stepNumber}}",
   "vote_singular": "stemme",
@@ -396,10 +395,10 @@
   "error_toggling_admin_role_title": "Feil ved endring av adminrolle",
   "cannot_change_own_admin_role": "Du kan ikke endre din egen adminrolle fra dette grensesnittet.",
   "confirm_delete_user_title": "Slette bruker {{email}}?",
-  "confirm_delete_user_desc_firestore_only": "Dette vil fjerne brukerens data (profil, godkjenningsstatus) fra applikasjonens database. DET VIL IKKE SLETTE DERES PÅLOGGINGSKONTO fra Firebase Authentication. De vil fortsatt kunne logge inn, men kan oppleve problemer. For fullstendig sletting, fjern dem fra Firebase Authentication i Firebase-konsollen.",
+  "confirm_delete_user_desc": "Dette vil fjerne brukerens data (profil, godkjenningsstatus) fra applikasjonens database.",
   "delete_user_confirm_button": "Slett brukerdata",
-  "user_deleted_firestore_title": "Brukerdata fjernet",
-  "user_deleted_desc": "Brukerdata for {{email}} er fjernet fra databasen. Husk å slette kontoen deres fra autentiseringssystemet for fullstendig fjerning.",
+  "user_deleted_title": "Brukerdata fjernet",
+  "user_deleted_desc": "Brukerdata for {{email}} er fjernet fra databasen.",
   "error_deleting_user_title": "Feil ved sletting av brukerdata",
   "cannot_delete_own_account_admin": "Du kan ikke slette din egen konto fra dette grensesnittet.",
   "exported_content": "Eksportert innhold",
@@ -412,5 +411,3 @@
   "theme_update_failed": "Temaoppdatering feilet",
   "theme_update_failed_desc": "Kunne ikke lagre temapreferansen din. Vennligst prøv igjen."
 }
-
-    

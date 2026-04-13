@@ -1,4 +1,3 @@
-
 {
   "app_title": "Oppskrift",
   "my_recipes": "My Recipes",
@@ -142,7 +141,6 @@
   "request_new_reset_link": "Request a New Reset Link",
   "reset_your_password": "Reset Your Password",
   "reset_password_page_description": "Enter your new password below for {{email}}.",
-  "reset_password_page_description_firebase": "Enter your new password below.",
   "reset_password_button": "Reset Password",
   "password_reset_success_title": "Password Reset Successful",
   "password_reset_success_desc": "Your password has been successfully updated. You can now log in with your new password.",
@@ -281,7 +279,7 @@
   "instruction_step_text_aria": "Instruction step #{{stepNumber}} text",
   "instruction_steps_reordered": "Instruction steps reordered.",
   "no_instructions_provided": "No instructions provided for this recipe.",
-  "user_not_authenticated_or_firestore_not_initialized": "User not authenticated or Firestore not initialized.",
+  "user_not_authenticated": "User not authenticated.",
   "error_updating_step_status": "Error updating step completion status.",
   "toggle_step_completion_aria": "Toggle completion for step {{stepNumber}}",
   "vote_singular": "vote",
@@ -396,10 +394,10 @@
   "error_toggling_admin_role_title": "Error Toggling Admin Role",
   "cannot_change_own_admin_role": "You cannot change your own admin role from this interface.",
   "confirm_delete_user_title": "Delete User {{email}}?",
-  "confirm_delete_user_desc_firestore_only": "This will remove the user's data (profile, approval status) from the application's database. IT WILL NOT DELETE THEIR LOGIN ACCOUNT from Firebase Authentication. They will still be able to log in but might encounter issues. For complete deletion, remove them from Firebase Authentication in the Firebase Console.",
+  "confirm_delete_user_desc": "This will remove the user's data (profile, approval status) from the application's database.",
   "delete_user_confirm_button": "Delete User Data",
-  "user_deleted_firestore_title": "User Data Removed",
-  "user_deleted_desc": "User data for {{email}} has been removed from the database. Remember to delete their account from the authentication system for complete removal.",
+  "user_deleted_title": "User Data Removed",
+  "user_deleted_desc": "User data for {{email}} has been removed from the database.",
   "error_deleting_user_title": "Error Deleting User Data",
   "cannot_delete_own_account_admin": "You cannot delete your own account from this interface.",
   "exported_content": "Exported Content",
@@ -412,5 +410,3 @@
   "theme_update_failed": "Theme update failed",
   "theme_update_failed_desc": "Could not save your theme preference. Please try again."
 }
-
-    

@@ -17,12 +17,10 @@
     "postinstall": "prisma migrate dev --name init_db && npm run seed"
   },
   "dependencies": {
-    "@next-auth/prisma-adapter": "^1.0.7",
-    "@genkit-ai/googleai": "^1.28.0",
-    "genkitx-mistral": "^0.30.0",
     "@genkit-ai/next": "^1.30.1",
     "@hello-pangea/dnd": "^16.6.0",
     "@hookform/resolvers": "^4.1.3",
+    "@next-auth/prisma-adapter": "^1.0.7",
     "@prisma/client": "^6.19.2",
     "@radix-ui/react-accordion": "^1.2.3",
     "@radix-ui/react-alert-dialog": "^1.1.6",
@@ -55,11 +53,12 @@
     "dotenv": "^16.5.0",
     "geist": "^1.3.0",
     "genkit": "^1.30.1",
+    "genkitx-mistral": "^0.30.0",
     "lucide-react": "^0.475.0",
     "next": "^15.5.15",
     "next-auth": "^4.24.13",
     "next-themes": "^0.4.6",
-    "nodemailer": "^7.0.13",
+    "nodemailer": "^8.0.5",
     "patch-package": "^8.0.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
@@ -73,7 +72,7 @@
   },
   "devDependencies": {
     "@types/node": "^24",
-    "@types/nodemailer": "^6.4.15",
+    "@types/nodemailer": "^6.4.17",
     "@types/react": "^18",
     "@types/react-beautiful-dnd": "^13.1.8",
     "@types/react-dom": "^18",
@@ -98,7 +97,7 @@
     "@tootallnate/once": "^3.0.1",
     "jws": "^4.0.1",
     "minimatch": "^10.2.4",
-    "nodemailer": "^7.0.13",
+    "nodemailer": "^8.0.5",
     "effect": "^3.21.0"
   }
 }

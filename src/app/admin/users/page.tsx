@@ -142,8 +142,8 @@ export default function AdminUsersPage() {
         throw new Error("Failed to delete user");
       }
       toast({ 
-        title: t('user_deleted_firestore_title'), 
-        description: t('user_deleted_firestore_desc', { email: userEmail || 'N/A' }),
+        title: t('user_deleted_title'), 
+        description: t('user_deleted_desc', { email: userEmail || 'N/A' }),
         duration: 7000 
       });
       setUsers(prevUsers => prevUsers.filter(u => u.id !== userId));
@@ -280,7 +280,7 @@ export default function AdminUsersPage() {
                                 <AlertDialogHeader>
                                   <AlertDialogTitle>{t('confirm_delete_user_title', {email: user.email || 'N/A'})}</AlertDialogTitle>
                                   <AlertDialogDescription>
-                                    {t('confirm_delete_user_desc_firestore_only')}
+                                    {t('confirm_delete_user_desc')}
                                   </AlertDialogDescription>
                                 </AlertDialogHeader>
                                 <AlertDialogFooter>
