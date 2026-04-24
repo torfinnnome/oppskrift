@@ -1,6 +1,6 @@
 
 import { config } from 'dotenv';
-config();
+config({ path: ['.env', '.env.local'] });
 
 import '@/ai/flows/suggest-recipe-image.ts';
 import '@/ai/flows/parse-recipe-from-text-flow.ts';

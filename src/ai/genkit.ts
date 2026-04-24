@@ -3,5 +3,5 @@ import {mistral} from 'genkitx-mistral';
 
 export const ai = genkit({
   plugins: [mistral()],
-  model: 'mistral-large-latest',
+  model: 'mistral/mistral-large',
 });

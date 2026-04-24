@@ -80,14 +80,14 @@ const ocrAndParseRecipeFlow = ai.defineFlow(
       for (let attempt = 0; attempt <= maxRetries; attempt++) {
         try {
           const generationResult = await ai.generate({
-            model: 'mistral-large-latest',
-            prompt: [
-              { text: "Extract all text from the following image. Present the text as clearly as possible for recipe parsing." },
-              { media: { url: input.imageDataUri } }
-            ],
+            model: 'mistral/ocr',
+            prompt: 'Extract all text from the image.',
             config: {
-              temperature: 0.2,
-            }
+              document: {
+                type: 'image_url',
+                imageUrl: input.imageDataUri,
+              },
+            },
           });
           ocrText = generationResult.text;
           lastError = null; // Clear error on success
@@ -175,7 +175,9 @@ Output JSON:
 `,
       });
       
-      const { output: parsedOutput } = await recipeParserPromptForOcr(parsingInput);
+      const { output: parsedOutput } = await recipeParserPromptForOcr(parsingInput, {
+        config: { version: 'mistral-large-latest' },
+      });
 
       if (!parsedOutput) {
         throw new Error('AI did not return structured recipe data after OCR parsing.');
