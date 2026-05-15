@@ -95,4 +95,47 @@ To set up the database and create the admin user:
 
 **Note:** If you ever need to reset your database (e.g., for development purposes), you can delete the `prisma/dev.db` file and run `npm install` again.
 
+### Running with Docker/Podman
+
+For improved security and isolation, you can run Oppskrift in a container using Docker or Podman.
+
+1.  **Configure environment variables:**
+
+    ```bash
+    cp .env.example .env
+    ```
+
+    Edit `.env` and at minimum set `NEXTAUTH_SECRET`:
+    ```bash
+    openssl rand -base64 32
+    ```
+
+    Optionally configure `MISTRAL_API_KEY` for AI features and SMTP settings for email.
+
+2.  **Build and start the container:**
+
+    With Docker:
+    ```bash
+    docker compose up -d --build
+    ```
+
+    With Podman:
+    ```bash
+    podman-compose up -d --build
+    ```
+
+3.  **Access the app:**
+
+    Open `http://localhost:9002` in your browser. On first startup, the container will run database migrations and create a default admin user (`admin@example.com`). The randomly generated admin password will be printed to the container logs:
+
+    ```bash
+    docker logs oppskrift
+    # or
+    podman logs oppskrift
+    ```
+
+4.  **Data persistence:**
+
+    The SQLite database is stored in a Docker volume (`db_data`), so your data persists across container restarts and rebuilds.
+
 **Note on Hosting with Google Firebase:** If you are interested in hosting this application using Google Firebase infrastructure, please refer to `v1.0` of this repository, which was specifically designed for that environment.

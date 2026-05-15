@@ -1,0 +1,27 @@
+# dependencies
+node_modules
+npm-debug.log*
+
+# next.js
+.next
+out
+
+# production
+build
+
+# misc
+.DS_Store
+*.pem
+
+# debug
+*.tsbuildinfo
+
+# env files
+.env*.local
+
+# git
+.genkit
+
+# prisma
+prisma/dev*
+src/generated/prisma
