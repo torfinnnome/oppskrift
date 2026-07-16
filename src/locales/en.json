@@ -408,5 +408,26 @@
   "theme_dark": "Dark",
   
   "theme_update_failed": "Theme update failed",
-  "theme_update_failed_desc": "Could not save your theme preference. Please try again."
+  "theme_update_failed_desc": "Could not save your theme preference. Please try again.",
+
+  "dinner_planner": "Dinner Planner",
+  "dinner_planner_title": "Weekly Dinner Plan",
+  "dinner_planner_desc": "Generate a weekly dinner plan from your recipes categorized with \"middag\".",
+  "generate_plan": "Generate Plan",
+  "regenerate_unlocked": "Regenerate",
+  "copy_plan": "Copy Plan",
+  "plan_copied": "Plan copied to clipboard!",
+  "no_middag_recipes": "No recipes with the \"middag\" category found. Add the \"middag\" category to recipes to use the planner.",
+  "not_enough_recipes": "Not enough recipes to fill the entire week.",
+  "lock_day": "Lock this day",
+  "unlock_day": "Unlock this day",
+  "swap_recipe": "Swap recipe",
+  "no_recipe": "No recipe",
+  "day_monday": "Monday",
+  "day_tuesday": "Tuesday",
+  "day_wednesday": "Wednesday",
+  "day_thursday": "Thursday",
+  "day_friday": "Friday",
+  "day_saturday": "Saturday",
+  "day_sunday": "Sunday"
 }

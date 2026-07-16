@@ -18,6 +18,7 @@ Oppskrift is a modern, web-based application designed to help you manage your pe
 *   **Star Rating System:** Users can rate public recipes (and owners their own private recipes) on a 1-5 star scale. Average ratings and vote counts are displayed. Users can also clear their vote.
 *   **Dynamic Ingredient Scaling:** Adjust serving sizes on the fly, and ingredient quantities will scale automatically.
 *   **Shopping List:** Add ingredients from recipes to a consolidated shopping list.
+*   **Dinner Week Planner:** Auto-generate a weekly dinner plan from recipes categorized as "middag". Recipes can be pinned to specific days using day-name categories (e.g., "søndag" → Sunday). Supports drag-and-drop reordering, locking/unlocking days, swapping recipes, and copying the plan to clipboard.
 *   **Filtering & Searching:** Easily find recipes by searching titles, descriptions, ingredients, categories, or tags. Filter by visibility (public, private, community).
 *   **User Authentication:** User accounts stored in a local SQLite database via NextAuth.js. Includes profile editing (name, email, password).
 *   **User Approval System:** New users require admin approval before they can create recipes or rate others' public recipes.

@@ -409,5 +409,26 @@
   "theme_dark": "Oscuro",
   
   "theme_update_failed": "Error al actualizar el tema",
-  "theme_update_failed_desc": "No se pudo guardar tu preferencia de tema. Por favor, inténtalo de nuevo."
+  "theme_update_failed_desc": "No se pudo guardar tu preferencia de tema. Por favor, inténtalo de nuevo.",
+
+  "dinner_planner": "Planificador de Cenas",
+  "dinner_planner_title": "Plan Semanal de Cenas",
+  "dinner_planner_desc": "Genera un plan semanal de cenas a partir de tus recetas con la categoría \"middag\".",
+  "generate_plan": "Generar Plan",
+  "regenerate_unlocked": "Regenerar",
+  "copy_plan": "Copiar Plan",
+  "plan_copied": "¡Plan copiado al portapapeles!",
+  "no_middag_recipes": "No se encontraron recetas con la categoría \"middag\". Añade la categoría \"middag\" a las recetas para usar el planificador.",
+  "not_enough_recipes": "No hay suficientes recetas para llenar toda la semana.",
+  "lock_day": "Bloquear este día",
+  "unlock_day": "Desbloquear este día",
+  "swap_recipe": "Cambiar receta",
+  "no_recipe": "Sin receta",
+  "day_monday": "Lunes",
+  "day_tuesday": "Martes",
+  "day_wednesday": "Miércoles",
+  "day_thursday": "Jueves",
+  "day_friday": "Viernes",
+  "day_saturday": "Sábado",
+  "day_sunday": "Domingo"
 }

@@ -8,7 +8,7 @@ import { siteConfig } from "@/config/site";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useTranslation } from "@/lib/i18n";
-import { Home, LogIn, LogOut, PlusCircle, UserPlus, UserCircle, Settings, ShoppingCart, UserCog } from "lucide-react";
+import { Home, LogIn, LogOut, PlusCircle, UserPlus, UserCircle, Settings, ShoppingCart, UserCog, UtensilsCrossed } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { getGravatarUrl } from "@/lib/utils";
 import {
@@ -56,6 +56,9 @@ export function Header() {
                 )}
                 <Button variant="ghost" asChild>
                   <Link href="/shopping-list">{t('shopping_list')}</Link>
+                </Button>
+                <Button variant="ghost" asChild>
+                  <Link href="/dinner-planner">{t('dinner_planner')}</Link>
                 </Button>
               </>
             )}

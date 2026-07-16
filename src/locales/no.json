@@ -409,5 +409,26 @@
   "theme_dark": "Mørk",
   
   "theme_update_failed": "Temaoppdatering feilet",
-  "theme_update_failed_desc": "Kunne ikke lagre temapreferansen din. Vennligst prøv igjen."
+  "theme_update_failed_desc": "Kunne ikke lagre temapreferansen din. Vennligst prøv igjen.",
+
+  "dinner_planner": "Middagsplanlegger",
+  "dinner_planner_title": "Ukens middagsplan",
+  "dinner_planner_desc": "Generer en ukentlig middagsplan fra oppskriftene dine med kategorien \"middag\".",
+  "generate_plan": "Generer plan",
+  "regenerate_unlocked": "Generer på nytt",
+  "copy_plan": "Kopier plan",
+  "plan_copied": "Plan kopiert til utklippstavlen!",
+  "no_middag_recipes": "Ingen oppskrifter med \"middag\"-kategori funnet. Legg til kategorien \"middag\" på oppskrifter for å bruke planleggeren.",
+  "not_enough_recipes": "Ikke nok oppskrifter for å fylle hele uken.",
+  "lock_day": "Lås denne dagen",
+  "unlock_day": "Lås opp denne dagen",
+  "swap_recipe": "Bytt oppskrift",
+  "no_recipe": "Ingen oppskrift",
+  "day_monday": "Mandag",
+  "day_tuesday": "Tirsdag",
+  "day_wednesday": "Onsdag",
+  "day_thursday": "Torsdag",
+  "day_friday": "Fredag",
+  "day_saturday": "Lørdag",
+  "day_sunday": "Søndag"
 }
