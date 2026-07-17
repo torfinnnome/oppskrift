@@ -8,7 +8,7 @@ import { siteConfig } from "@/config/site";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useTranslation } from "@/lib/i18n";
-import { Home, LogIn, LogOut, PlusCircle, UserPlus, UserCircle, Settings, ShoppingCart, UserCog, UtensilsCrossed } from "lucide-react";
+import { Home, LogIn, LogOut, PlusCircle, UserPlus, UserCircle, Settings, ShoppingCart, UserCog, UtensilsCrossed, ListTodo } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { getGravatarUrl } from "@/lib/utils";
 import {
@@ -86,6 +86,12 @@ export function Header() {
                 <DropdownMenuSeparator />
                 <DropdownMenuItem asChild>
                   <Link href="/dashboard"><Home className="mr-2 h-4 w-4" /> {t('dashboard')}</Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                   <Link href="/dinner-planner"><UtensilsCrossed className="mr-2 h-4 w-4" /> {t('dinner_planner')}</Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                   <Link href="/shopping-list"><ListTodo className="mr-2 h-4 w-4" /> {t('shopping_list')}</Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
                    <Link href="/profile"><UserCircle className="mr-2 h-4 w-4" /> {t('profile')}</Link>
