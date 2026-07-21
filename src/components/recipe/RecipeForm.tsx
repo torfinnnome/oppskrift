@@ -31,6 +31,7 @@ import { DragDropContext, Droppable, Draggable, type DropResult } from '@hello-p
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import { CategoryTagCombobox } from "./CategoryTagCombobox";
 
 const ingredientSchema = z.object({
   id: z.string().optional(),
@@ -163,6 +164,10 @@ export function RecipeForm({ initialData, isEditMode = false }: RecipeFormProps)
   const [isDraggingOverOcr, setIsDraggingOverOcr] = useState(false);
   const [isDraggingOverRecipeImage, setIsDraggingOverRecipeImage] = useState(false);
 
+  const [categoriesData, setCategoriesData] = useState<{ id: string; name: string; count: number }[]>([]);
+  const [tagsData, setTagsData] = useState<{ id: string; name: string; count: number }[]>([]);
+  const [categoriesLoading, setCategoriesLoading] = useState(true);
+
   const currentRecipeFormSchema = recipeFormSchemaFactory(t);
 
   const form = useForm<RecipeFormValues>({
@@ -267,6 +272,17 @@ export function RecipeForm({ initialData, isEditMode = false }: RecipeFormProps)
     });
     return () => subscription.unsubscribe();
   }, [form, imagePreview]);
+
+  useEffect(() => {
+    fetch("/api/categories-tags")
+      .then((res) => res.json())
+      .then((data) => {
+        setCategoriesData(data.categories || []);
+        setTagsData(data.tags || []);
+        setCategoriesLoading(false);
+      })
+      .catch(() => setCategoriesLoading(false));
+  }, []);
 
   const { fields: groupFields, append: appendGroup, remove: removeGroup } = useFieldArray({
     control: form.control,
@@ -778,14 +794,20 @@ export function RecipeForm({ initialData, isEditMode = false }: RecipeFormProps)
                   </FormItem>
               )} />
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField control={form.control} name="categories" render={({ field }) => (
-                <FormItem><FormLabel>{t('categories')} ({t('comma_separated')})</FormLabel><FormControl><Input placeholder={t('categories_placeholder')} {...field} value={Array.isArray(field.value) ? field.value.join(', ') : field.value || ''} onChange={(e) => field.onChange(e.target.value)} /></FormControl><FormMessage>{translateError(form.formState.errors.categories?.message)}</FormMessage></FormItem>
-              )} />
-              <FormField control={form.control} name="tags" render={({ field }) => (
-                <FormItem><FormLabel>{t('tags')} ({t('comma_separated')})</FormLabel><FormControl><Input placeholder={t('tags_placeholder')} {...field} value={Array.isArray(field.value) ? field.value.join(', ') : field.value || ''} onChange={(e) => field.onChange(e.target.value)} /></FormControl><FormMessage>{translateError(form.formState.errors.tags?.message)}</FormMessage></FormItem>
-              )} />
-            </div>
+            <CategoryTagCombobox
+              type="category"
+              value={(form.watch("categories") as string[]) || []}
+              onChange={(val) => form.setValue("categories", val, { shouldValidate: true })}
+              existingItems={categoriesData}
+              loading={categoriesLoading}
+            />
+            <CategoryTagCombobox
+              type="tag"
+              value={(form.watch("tags") as string[]) || []}
+              onChange={(val) => form.setValue("tags", val, { shouldValidate: true })}
+              existingItems={tagsData}
+              loading={categoriesLoading}
+            />
             <FormField control={form.control} name="isPublic" render={({ field }) => (
               <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm"><div className="space-y-0.5"><FormLabel>{t('make_recipe_public_default_true')}</FormLabel><FormDescription>{field.value ? <Eye className="h-4 w-4 inline mr-1" /> : <EyeOff className="h-4 w-4 inline mr-1" />}{field.value ? t('recipe_public_description_true_default') : t('recipe_private_description_explicit')}</FormDescription></div><FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl></FormItem>
             )} />

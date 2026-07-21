@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
 import { useTranslation } from "@/lib/i18n";
-import type { Recipe, DayMeal, GeneratePlanResponse } from "@/types";
+import type { Recipe, DayMeal, GeneratePlanResponse, PlannerOptions } from "@/types";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -25,6 +25,7 @@ import {
   GripVertical,
 } from "lucide-react";
 import Link from "next/link";
+import { CategoryTagSelector } from "@/components/dinner-planner/CategoryTagSelector";
 
 const DAY_KEYS = [
   "day_monday",
@@ -62,6 +63,46 @@ export default function DinnerPlannerPage() {
   const [pool, setPool] = useState<Recipe[]>([]);
   const [generating, setGenerating] = useState(false);
   const [hasGenerated, setHasGenerated] = useState(false);
+  const initialized = useRef(false);
+
+  // Category/Tag filter state
+  const [availableCategories, setAvailableCategories] = useState<string[]>([]);
+  const [availableTags, setAvailableTags] = useState<string[]>([]);
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [optionsLoading, setOptionsLoading] = useState(true);
+
+  // Fetch available categories and tags on mount, pre-select "middag" if available,
+  // then auto-generate a plan. Only runs once (guards against tab-switch re-auth).
+  useEffect(() => {
+    if (!authLoading && user && !initialized.current) {
+      initialized.current = true;
+      fetch("/api/dinner-planner/options")
+        .then((res) => {
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          return res.json();
+        })
+        .then((data: PlannerOptions) => {
+          const cats = data.categories || [];
+          setAvailableCategories(cats);
+          setAvailableTags(data.tags || []);
+
+          // Pre-select "middag" (case-insensitive) if it exists
+          const middagCat = cats.find(
+            (c) => c.toLowerCase() === "middag"
+          );
+          if (middagCat) {
+            setSelectedCategories([middagCat]);
+            // Auto-generate with "middag" on first load
+            generatePlan([middagCat], []);
+          }
+        })
+        .catch((err) => {
+          console.error("[dinner-planner] Failed to fetch options:", err);
+        })
+        .finally(() => setOptionsLoading(false));
+    }
+  }, [authLoading, user]);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -69,20 +110,18 @@ export default function DinnerPlannerPage() {
     }
   }, [user, authLoading, router]);
 
-  // Auto-generate plan on page load
-  useEffect(() => {
-    if (!authLoading && user && !hasGenerated) {
-      generatePlan();
-    }
-  }, [authLoading, user, hasGenerated]);
-
-  const generatePlan = useCallback(async () => {
+  const generatePlan = useCallback(
+    async (cats?: string[], tags?: string[]) => {
     setGenerating(true);
     try {
       const res = await fetch("/api/dinner-planner/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ locale: currentLanguage }),
+        body: JSON.stringify({
+          locale: currentLanguage,
+          categoryFilters: cats,
+          tagFilters: tags,
+        }),
       });
 
       if (!res.ok) {
@@ -95,7 +134,7 @@ export default function DinnerPlannerPage() {
 
       if (data.pool.length === 0 && data.preAssigned.length === 0) {
         toast({
-          title: t("no_middag_recipes"),
+          title: t("no_matching_recipes"),
           variant: "destructive",
         });
         setGenerating(false);
@@ -150,6 +189,18 @@ export default function DinnerPlannerPage() {
       setGenerating(false);
     }
   }, [currentLanguage, t]);
+
+  const handleFilterChange = useCallback(
+    (cats: string[], tags: string[]) => {
+      setSelectedCategories(cats);
+      setSelectedTags(tags);
+    },
+    []
+  );
+
+  const handleGenerateWithFilters = useCallback(() => {
+    generatePlan(selectedCategories, selectedTags);
+  }, [selectedCategories, selectedTags, generatePlan]);
 
   const regenerateUnlocked = useCallback(() => {
     setMeals((prev) => {
@@ -316,23 +367,39 @@ export default function DinnerPlannerPage() {
           <CardDescription>{t("dinner_planner_desc")}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          {/* Category/Tag filter selector */}
+          <CategoryTagSelector
+            availableCategories={availableCategories}
+            availableTags={availableTags}
+            selectedCategories={selectedCategories}
+            selectedTags={selectedTags}
+            onChange={handleFilterChange}
+            loading={optionsLoading}
+          />
+
           <div className="flex flex-wrap gap-2">
             {!hasGenerated ? (
-              <Button onClick={generatePlan} disabled={generating}>
+              <Button
+                onClick={handleGenerateWithFilters}
+                disabled={
+                  generating ||
+                  (selectedCategories.length === 0 && selectedTags.length === 0)
+                }
+              >
                 <UtensilsCrossed className="mr-2 h-4 w-4" />
                 {t("generate_plan")}
               </Button>
             ) : (
-              <>
-                <Button onClick={regenerateUnlocked} variant="outline">
-                  <RefreshCw className="mr-2 h-4 w-4" />
-                  {t("regenerate_unlocked")}
-                </Button>
-                <Button onClick={copyPlan} variant="outline">
-                  <Copy className="mr-2 h-4 w-4" />
-                  {t("copy_plan")}
-                </Button>
-              </>
+              <Button onClick={regenerateUnlocked} variant="outline">
+                <RefreshCw className="mr-2 h-4 w-4" />
+                {t("regenerate_unlocked")}
+              </Button>
+            )}
+            {hasGenerated && (
+              <Button onClick={copyPlan} variant="outline">
+                <Copy className="mr-2 h-4 w-4" />
+                {t("copy_plan")}
+              </Button>
             )}
           </div>
 
@@ -435,7 +502,7 @@ export default function DinnerPlannerPage() {
 
           {!hasGenerated && !generating && (
             <p className="text-muted-foreground text-center py-6">
-              {t("generate_plan").toLowerCase() + "..."}
+              {t("planner_initial_hint")}
             </p>
           )}
 

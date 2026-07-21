@@ -47,6 +47,22 @@ function HomePageContent() {
   const categoryFilter = searchParams.get("category");
   const tagFilter = searchParams.get("tag");
 
+  // Popular categories/tags cloud
+  const [popularCategories, setPopularCategories] = useState<{ name: string; count: number }[]>([]);
+  const [popularTags, setPopularTags] = useState<{ name: string; count: number }[]>([]);
+  const [popularLoading, setPopularLoading] = useState(true);
+
+  useEffect(() => {
+    fetch("/api/categories-tags")
+      .then((res) => res.json())
+      .then((data) => {
+        setPopularCategories((data.categories || []).slice(0, 20));
+        setPopularTags((data.tags || []).slice(0, 20));
+        setPopularLoading(false);
+      })
+      .catch(() => setPopularLoading(false));
+  }, []);
+
   const [searchTerm, setSearchTerm] = useState("");
 
   const visibilityFilter: VisibilityFilter = useMemo(() => {
@@ -189,6 +205,46 @@ function HomePageContent() {
             {t('account_pending_approval_desc')}
           </AlertDescription>
         </Alert>
+      )}
+
+      {/* Popular categories/tags cloud */}
+      {!isAnyFilterActive && !isLoading && session && !popularLoading && (popularCategories.length > 0 || popularTags.length > 0) && (
+        <div className="space-y-3 p-4 rounded-lg border bg-card">
+          {popularCategories.length > 0 && (
+            <div className="space-y-2">
+              <h3 className="text-sm font-medium text-muted-foreground">{t('popular_categories')}:</h3>
+              <div className="flex flex-wrap gap-2">
+                {popularCategories.map((cat) => (
+                  <Link key={cat.name} href={`/?category=${encodeURIComponent(cat.name)}`} passHref legacyBehavior>
+                    <a className="no-underline">
+                      <Badge variant="secondary" className="cursor-pointer hover:bg-primary/10 hover:border-primary/50 border border-transparent transition-colors">
+                        <Bookmark className="h-3 w-3 mr-1" />
+                        {cat.name} <span className="text-muted-foreground ml-1">({cat.count})</span>
+                      </Badge>
+                    </a>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
+          {popularTags.length > 0 && (
+            <div className="space-y-2">
+              <h3 className="text-sm font-medium text-muted-foreground">{t('popular_tags')}:</h3>
+              <div className="flex flex-wrap gap-2">
+                {popularTags.map((tag) => (
+                  <Link key={tag.name} href={`/?tag=${encodeURIComponent(tag.name)}`} passHref legacyBehavior>
+                    <a className="no-underline">
+                      <Badge variant="outline" className="cursor-pointer hover:bg-accent/10 hover:border-accent/50 border border-transparent transition-colors">
+                        <Tag className="h-3 w-3 mr-1" />
+                        {tag.name} <span className="text-muted-foreground ml-1">({tag.count})</span>
+                      </Badge>
+                    </a>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
       )}
 
 

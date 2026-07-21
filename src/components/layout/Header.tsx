@@ -62,6 +62,11 @@ export function Header() {
                 </Button>
               </>
             )}
+            {isAdmin && (
+              <Button variant="ghost" asChild>
+                <Link href="/admin/categories-tags">{t('admin_categories_tags')}</Link>
+              </Button>
+            )}
           </nav>
           <LanguageSwitcher />
           <ThemeToggle />
