@@ -15,3 +15,14 @@ export interface GeneratePlanResponse {
   preAssigned: { dayIndex: number; recipe: Recipe }[];
   pool: Recipe[];
 }
+
+export interface GeneratePlanRequest {
+  locale?: string;
+  categoryFilters?: string[];
+  tagFilters?: string[];
+}
+
+export interface PlannerOptions {
+  categories: string[];
+  tags: string[];
+}

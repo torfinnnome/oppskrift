@@ -2,39 +2,37 @@ import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import type { GeneratePlanRequest } from "@/types";
 
-const MIDDAG_CATEGORY = "middag";
-
-const DAY_TAGS: Record<string, Record<string, number>> = {
-  no: {
-    mandag: 0,
-    tirsdag: 1,
-    onsdag: 2,
-    torsdag: 3,
-    fredag: 4,
-    lørdag: 5,
-    søndag: 6,
-  },
-  en: {
-    monday: 0,
-    tuesday: 1,
-    wednesday: 2,
-    thursday: 3,
-    friday: 4,
-    saturday: 5,
-    sunday: 6,
-  },
-  es: {
-    lunes: 0,
-    martes: 1,
-    miercoles: 2,
-    miércoles: 2,
-    jueves: 3,
-    viernes: 4,
-    sabado: 5,
-    sábado: 5,
-    domingo: 6,
-  },
+// Merged day-name → index map across all supported languages (case-insensitive keys)
+const DAY_TO_INDEX: Record<string, number> = {
+  // Norwegian
+  mandag: 0,
+  tirsdag: 1,
+  onsdag: 2,
+  torsdag: 3,
+  fredag: 4,
+  lørdag: 5,
+  søndag: 6,
+  // English
+  monday: 0,
+  tuesday: 1,
+  wednesday: 2,
+  thursday: 3,
+  friday: 4,
+  saturday: 5,
+  sunday: 6,
+  // Spanish
+  lunes: 0,
+  martes: 1,
+  miercoles: 2,
+  jueves: 3,
+  viernes: 4,
+  sabado: 5,
+  domingo: 6,
+  // Accented variants
+  miércoles: 2,
+  sábado: 5,
 };
 
 export async function POST(req: NextRequest) {
@@ -44,12 +42,15 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { locale = "no" } = await req.json();
+  const body: GeneratePlanRequest = await req.json();
+  const categoryFilters = (body.categoryFilters || [])
+    .filter(Boolean)
+    .map((c: string) => c.toLowerCase());
+  const tagFilters = (body.tagFilters || [])
+    .filter(Boolean)
+    .map((t: string) => t.toLowerCase());
 
-  const dayTagMap = DAY_TAGS[locale] || DAY_TAGS.no;
-
-  // Fetch all visible recipes with tags, then filter in app code
-  // (SQLite doesn't support case-insensitive mode)
+  // Fetch all visible recipes with tags, categories, etc.
   const allRecipes = await prisma.recipe.findMany({
     where: {
       OR: [
@@ -79,22 +80,46 @@ export async function POST(req: NextRequest) {
     },
   });
 
-  console.log("[dinner-planner] total recipes fetched:", allRecipes.length, "userId:", session.user.id);
-
-  const recipes = allRecipes.filter((recipe) =>
-    recipe.categories.some((cat) => cat.name.toLowerCase() === MIDDAG_CATEGORY)
+  console.log(
+    "[dinner-planner] total recipes fetched:",
+    allRecipes.length,
+    "userId:",
+    session.user.id,
+    "categoryFilters:",
+    categoryFilters,
+    "tagFilters:",
+    tagFilters
   );
+
+  // Filter by user-selected categories and tags (case-insensitive, OR within each group)
+  let recipes = allRecipes;
+
+  if (categoryFilters.length > 0) {
+    recipes = recipes.filter((recipe) =>
+      recipe.categories.some((cat) =>
+        categoryFilters.includes(cat.name.toLowerCase())
+      )
+    );
+  }
+
+  if (tagFilters.length > 0) {
+    recipes = recipes.filter((recipe) =>
+      recipe.tags.some((tag) => tagFilters.includes(tag.name.toLowerCase()))
+    );
+  }
 
   const preAssigned: { dayIndex: number; recipe: typeof recipes[number] }[] = [];
   const pool: typeof recipes = [];
 
   for (const recipe of recipes) {
-    const categoryNames = recipe.categories.map((c) => c.name.toLowerCase());
-    const dayCatEntry = Object.entries(dayTagMap).find(([cat]) => categoryNames.includes(cat));
+    const categoryNamesLower = recipe.categories.map((c) => c.name.toLowerCase());
+    const dayEntry = Object.entries(DAY_TO_INDEX).find(([dayName]) =>
+      categoryNamesLower.includes(dayName)
+    );
 
-    if (dayCatEntry) {
+    if (dayEntry) {
       preAssigned.push({
-        dayIndex: dayCatEntry[1],
+        dayIndex: dayEntry[1],
         recipe,
       });
     } else {
