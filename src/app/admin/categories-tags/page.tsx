@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTranslation } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
@@ -281,7 +282,11 @@ export default function AdminCategoriesTagsPage() {
                   <TableBody>
                     {filteredItems.map((item) => (
                       <TableRow key={item.id}>
-                        <TableCell className="font-medium">{item.name}</TableCell>
+                        <TableCell className="font-medium">
+                          <Link href={`/?${item.type === "category" ? "category" : "tag"}=${encodeURIComponent(item.name)}`} className="text-primary hover:underline">
+                            {item.name}
+                          </Link>
+                        </TableCell>
                         <TableCell>
                           <Badge variant={item.type === "category" ? "default" : "secondary"}>
                             {item.type === "category" ? t("category") : t("tag")}
