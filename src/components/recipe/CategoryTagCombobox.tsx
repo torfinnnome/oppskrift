@@ -228,7 +228,7 @@ export function CategoryTagCombobox({
                   >
                     <PlusCircle className="h-3.5 w-3.5 shrink-0" />
                     <span className="truncate">
-                      {t("create_new_x", { name: search.trim() })}
+                      {t("create_new", { name: search.trim() })}
                     </span>
                   </div>
                 )}
