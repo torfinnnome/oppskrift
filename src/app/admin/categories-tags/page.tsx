@@ -345,8 +345,8 @@ export default function AdminCategoriesTagsPage() {
                                   <DialogTitle>{t("merge_item")}</DialogTitle>
                                   <DialogDescription>
                                     {t("merge_confirm_message")
-                                      .replace("{{source}}", item.name)
-                                      .replace("{{target}}", mergeCandidates.find((c) => c.id === mergeTargetId)?.name || "???")}
+                                      .replaceAll("{{source}}", item.name)
+                                      .replaceAll("{{target}}", mergeCandidates.find((c) => c.id === mergeTargetId)?.name || "???")}
                                   </DialogDescription>
                                 </DialogHeader>
                                 <Select value={mergeTargetId} onValueChange={setMergeTargetId}>
