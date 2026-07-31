@@ -76,6 +76,10 @@ export async function POST(
         UPDATE "_RecipeCategories"
         SET "A" = ${targetId}
         WHERE "A" = ${id}
+        AND NOT EXISTS (
+          SELECT 1 FROM "_RecipeCategories" rc2
+          WHERE rc2."A" = ${targetId} AND rc2."B" = "_RecipeCategories"."B"
+        )
       `;
       await prisma.category.delete({ where: { id } });
     } else {
@@ -84,6 +88,10 @@ export async function POST(
         UPDATE "_RecipeTags"
         SET "B" = ${targetId}
         WHERE "B" = ${id}
+        AND NOT EXISTS (
+          SELECT 1 FROM "_RecipeTags" rt2
+          WHERE rt2."B" = ${targetId} AND rt2."A" = "_RecipeTags"."A"
+        )
       `;
       await prisma.tag.delete({ where: { id } });
     }
