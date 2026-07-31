@@ -1,0 +1,6 @@
+{
+  "name": "@genkit-ai/firebase",
+  "version": "1.39.0",
+  "main": "index.js",
+  "exports": { ".": "./index.js" }
+}
