@@ -56,8 +56,8 @@ function HomePageContent() {
     fetch("/api/categories-tags")
       .then((res) => res.json())
       .then((data) => {
-        setPopularCategories((data.categories || []).slice(0, 20));
-        setPopularTags((data.tags || []).slice(0, 20));
+        setPopularCategories((data.categories || []).slice(0, 10));
+        setPopularTags((data.tags || []).slice(0, 10));
         setPopularLoading(false);
       })
       .catch(() => setPopularLoading(false));
