@@ -176,7 +176,8 @@ Output JSON:
       });
       
       const { output: parsedOutput } = await recipeParserPromptForOcr(parsingInput, {
-        config: { version: 'mistral-large-latest' },
+        model: 'mistral/mistral-medium',
+        config: { version: 'mistral-medium-latest' },
       });
 
       if (!parsedOutput) {

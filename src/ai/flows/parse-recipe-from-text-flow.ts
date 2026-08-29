@@ -141,8 +141,8 @@ const parseRecipeFlow = ai.defineFlow(
   async (input: ParseRecipeInput) => {
     try {
       const { output } = await recipeParserPrompt(input, {
-        model: 'mistral/mistral-large',
-        config: { version: 'mistral-large-latest' },
+        model: 'mistral/mistral-medium',
+        config: { version: 'mistral-medium-latest' },
       });
       if (!output) {
         throw new Error('AI did not return structured recipe data.');
