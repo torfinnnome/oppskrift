@@ -8,8 +8,9 @@
  * - ParseRecipeOutput - The return type (structured recipe data).
  */
 
-import { ai } from '@/ai/genkit';
+import { ai, textModel } from '@/ai/genkit';
 import { z } from 'genkit';
+import { stripNulls } from './strip-nulls';
 
 // Define Input Schema
 const ParseRecipeInputSchema = z.object({
@@ -20,15 +21,15 @@ export type ParseRecipeInput = z.infer<typeof ParseRecipeInputSchema>;
 // Define Output Schema (aligns with RecipeFormValues where possible, with descriptions for AI)
 const ParsedRecipeOutputSchema = z.object({
   title: z.string().describe("The title of the recipe. Extract this as accurately as possible from the source."),
-  description: z.string().optional().describe("A brief description or introduction to the recipe, if present in the source. Extract only."),
+  description: z.string().nullable().optional().describe("A brief description or introduction to the recipe, if present in the source. Extract only."),
   ingredientGroups: z.array(
     z.object({
-      name: z.string().optional().describe("The name of this ingredient group (e.g., 'For the dough', 'For the filling') if explicitly stated in the source. If the source text does not explicitly name groups, you can create a single group named 'Ingredients' or leave this empty."),
+      name: z.string().nullable().optional().describe("The name of this ingredient group (e.g., 'For the dough', 'For the filling') if explicitly stated in the source. If the source text does not explicitly name groups, you can create a single group named 'Ingredients' or leave this empty."),
       ingredients: z.array(
         z.object({
           name: z.string().describe("The name of the ingredient (e.g., 'flour', 'sugar', 'eggs'). CRITICAL: This 'name' field must contain *only* the primary name of the ingredient. It should NOT include the quantity or unit, as those should be parsed into the separate 'quantity' and 'unit' fields. For example, if the source text for an ingredient is '250 g flour', the 'name' should be 'flour', 'quantity' should be '250', and 'unit' should be 'g'. This field MUST NOT contain numbers or units that belong in the other fields."),
-          quantity: z.string().optional().describe("The quantity of the ingredient (e.g., '250', '1 1/4', 'a pinch') as found in the source. Include numeric values and fractions if present."),
-          unit: z.string().optional().describe("The unit for the quantity (e.g., 'g', 'ts', 'ml', 'stk') as found in the source.")
+          quantity: z.string().nullable().optional().describe("The quantity of the ingredient (e.g., '250', '1 1/4', 'a pinch') as found in the source. Include numeric values and fractions if present."),
+          unit: z.string().nullable().optional().describe("The unit for the quantity (e.g., 'g', 'ts', 'ml', 'stk') as found in the source.")
         })
       ).describe("The list of ingredients in this group. Each ingredient should be an object with name, quantity, and unit, extracted directly from the source.")
     })
@@ -42,15 +43,15 @@ const ParsedRecipeOutputSchema = z.object({
     z.object({
       text: z.string().describe("A single tip, suggestion, or variation for the recipe, if any are provided in the source. Extract only.")
     })
-  ).optional().describe("An array of tips or suggestions, if any are explicitly found in the source."),
-  servingsValue: z.number().optional().describe("The numerical value for the recipe's yield (e.g., if it serves 4 people, this is 4), if specified in the source."),
-  servingsUnit: z.enum(['servings', 'pieces']).optional().describe("The unit for the yield, typically 'servings' or 'pieces', if specified. Default to 'servings' if unclear from source."),
-  prepTime: z.string().optional().describe("The preparation time, if specified in the source (e.g., '30 mins', '1 hour')."),
-  cookTime: z.string().optional().describe("The cooking time, if specified in the source (e.g., '45 mins', '2 hours')."),
-  tags: z.string().optional().describe("Relevant tags for the recipe, as a single comma-separated string (e.g., 'easy, quick, dessert'). Extract if obvious or explicitly listed in the source."),
-  categories: z.string().optional().describe("Relevant categories for the recipe, as a single comma-separated string (e.g., 'Cakes, Norwegian, Baking'). Extract if obvious or explicitly listed in the source."),
-  sourceUrl: z.string().optional().describe("If the `inputText` appears to be a valid HTTP/HTTPS URL, this field should contain that exact URL. Otherwise, this field should be omitted or undefined."),
-  extractedImageUrl: z.string().optional().describe("If the input was a URL, this should be the URL of the main recipe image found on the page. Prioritize 'og:image' meta tags, then the most prominent image clearly associated with the recipe title or content. Ensure it's a direct image file link (e.g., .jpg, .png). Otherwise, omit this field."),
+  ).nullable().optional().describe("An array of tips or suggestions, if any are explicitly found in the source."),
+  servingsValue: z.number().nullable().optional().describe("The numerical value for the recipe's yield (e.g., if it serves 4 people, this is 4), if specified in the source."),
+  servingsUnit: z.enum(['servings', 'pieces']).nullable().optional().describe("The unit for the yield, typically 'servings' or 'pieces', if specified. Default to 'servings' if unclear from source."),
+  prepTime: z.string().nullable().optional().describe("The preparation time, if specified in the source (e.g., '30 mins', '1 hour')."),
+  cookTime: z.string().nullable().optional().describe("The cooking time, if specified in the source (e.g., '45 mins', '2 hours')."),
+  tags: z.string().nullable().optional().describe("Relevant tags for the recipe, as a single comma-separated string (e.g., 'easy, quick, dessert'). Extract if obvious or explicitly listed in the source."),
+  categories: z.string().nullable().optional().describe("Relevant categories for the recipe, as a single comma-separated string (e.g., 'Cakes, Norwegian, Baking'). Extract if obvious or explicitly listed in the source."),
+  sourceUrl: z.string().nullable().optional().describe("If the `inputText` appears to be a valid HTTP/HTTPS URL, this field should contain that exact URL. Otherwise, this field should be omitted or undefined."),
+  extractedImageUrl: z.string().nullable().optional().describe("If the input was a URL, this should be the URL of the main recipe image found on the page. Prioritize 'og:image' meta tags, then the most prominent image clearly associated with the recipe title or content. Ensure it's a direct image file link (e.g., .jpg, .png). Otherwise, omit this field."),
 });
 export type ParseRecipeOutput = z.infer<typeof ParsedRecipeOutputSchema>;
 
@@ -141,8 +142,7 @@ const parseRecipeFlow = ai.defineFlow(
   async (input: ParseRecipeInput) => {
     try {
       const { output } = await recipeParserPrompt(input, {
-        model: 'mistral/mistral-medium',
-        config: { version: 'mistral-medium-latest' },
+        model: textModel,
       });
       if (!output) {
         throw new Error('AI did not return structured recipe data.');
@@ -151,7 +151,7 @@ const parseRecipeFlow = ai.defineFlow(
       if (!output.title || !output.ingredientGroups || !output.instructions) {
         throw new Error('AI output is missing essential recipe fields (title, ingredients, or instructions).');
       }
-      return output;
+      return stripNulls(output) as ParseRecipeOutput;
     } catch (error) {
       console.error('[parseRecipeFlow] Error during recipe parsing:', error);
       // Re-throw to be caught by the calling UI component

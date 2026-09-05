@@ -37,23 +37,24 @@ const suggestRecipeImageFlow = ai.defineFlow(
     outputSchema: SuggestRecipeImageOutputSchema,
   },
   async (input: SuggestRecipeImageInput) => {
-    // NOTE: Mistral AI does not currently offer image generation capabilities like Google Gemini.
-    // This function would need to be reimplemented using a different service for image generation.
-    // Options include:
-    // 1. OpenAI DALL-E
-    // 2. Stability AI
-    // 3. Replicate
-    // 4. Remove image generation and use placeholder images instead
-    
-    console.warn('[suggestRecipeImageFlow] Mistral AI does not support image generation. This feature needs to be reimplemented with an alternative service.');
-    
+    // NOTE: Image generation requires a provider that supports it (e.g., OpenAI DALL-E).
+    // Not all OpenAI-compatible endpoints support image generation. To enable:
+    // 1. Ensure OPENAI_BASE_URL points to a provider with image generation (e.g., OpenAI).
+    // 2. Use the compat-oai openAI plugin's image model support (dall-e-3, gpt-image-1).
+    // 3. Uncomment and adapt the implementation below.
+
+    console.warn('[suggestRecipeImageFlow] Image generation is not configured. This feature requires an OpenAI-compatible provider with image generation support (e.g., OpenAI DALL-E).');
+
     try {
       // For now, return a placeholder approach
-      // In a real implementation, you would integrate with a different image generation service
-      throw new Error('Image generation not available with Mistral AI. Please integrate with an alternative image generation service like OpenAI DALL-E, Stability AI, or use placeholder images.');
+      throw new Error('Image generation is not configured. Set OPENAI_API_KEY and OPENAI_BASE_URL to a provider that supports image generation (e.g., OpenAI with dall-e-3).');
       
-      /* 
-      // Example implementation with OpenAI DALL-E (uncomment and implement if using OpenAI):
+      /*
+      // Example implementation using the compat-oai OpenAI plugin (uncomment and adapt):
+      // First, add `openAI` to the plugins array in genkit.ts:
+      //   import { openAI } from '@genkit-ai/compat-oai/openai';
+      //   plugins: [openAICompatible({...}), openAI()]
+      // Then use the OpenAI image model:
       const {media} = await ai.generate({
         model: 'openai/dall-e-3',
         prompt: `IMPORTANT: Generate a PURELY VISUAL, LOW-RESOLUTION image (ABSOLUTELY NO TEXT, NO WORDS, NO LETTERS, NO TYPOGRAPHY) that represents the recipe titled: "${input.recipeTitle}". The image should be in landscape orientation, wider than it is tall, for example with a 16:9 aspect ratio. CRITICAL: The image MUST have a small file size, suitable for a data URI and ideally under 500KB.`,
@@ -66,7 +67,7 @@ const suggestRecipeImageFlow = ai.defineFlow(
           console.error('[suggestRecipeImageFlow] AI did not return a valid data URI for the image. Media object:', media);
           throw new Error('AI did not return a valid data URI for the image.');
       }
-      
+
       console.log(`[suggestRecipeImageFlow] Successfully generated image for title: "${input.recipeTitle}", Data URI length: ${media?.url?.length}`);
       return {imageUri: media?.url || ''};
       */

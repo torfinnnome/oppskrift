@@ -12,9 +12,9 @@ Oppskrift is a modern, web-based application designed to help you manage your pe
 
 *   **Recipe Management:** Add, view, edit, and delete your personal recipes. Recipes can be marked as public (visible to all users, even unauthenticated) or private (visible only to the creator).
 *   **Rich Recipe Details:** Store ingredients, multi-step instructions, serving sizes, prep/cook times, categories, and tags.
-*   **AI-Powered Recipe Import (Text/URL):** Paste raw recipe text or a URL into the recipe form, and an AI agent (powered by Genkit and Mistral AI) will attempt to parse the content and automatically populate the form fields. The AI uses the currently selected UI language as a guide for parsing.
-*   **AI-Powered Recipe Import (Image OCR):** Upload an image of a recipe (or drag-and-drop), and the AI will perform Optical Recognition (OCR) to extract text, then parse that text to populate the recipe form. This feature also uses the selected UI language to guide the AI.
-*   **AI-Powered Image Suggestions:** (Note: This feature is currently limited as Mistral AI does not natively support image generation. Re-implementation with a service like DALL-E or Stability AI is required for full functionality).
+*   **AI-Powered Recipe Import (Text/URL):** Paste raw recipe text or a URL into the recipe form, and an AI agent (powered by Genkit and any OpenAI-compatible API) will attempt to parse the content and automatically populate the form fields. The AI uses the currently selected UI language as a guide for parsing.
+*   **AI-Powered Recipe Import (Image OCR):** Upload an image of a recipe (or drag-and-drop), and a vision-capable AI model will analyze the image in a single step — performing OCR and structured parsing together — to populate the recipe form. This feature also uses the selected UI language to guide the AI.
+*   **AI-Powered Image Suggestions:** (Note: This feature requires a provider with image generation support, e.g., OpenAI DALL-E. Not all OpenAI-compatible endpoints support image generation. See `src/ai/flows/suggest-recipe-image.ts` for implementation guidance.)
 *   **Star Rating System:** Users can rate public recipes (and owners their own private recipes) on a 1-5 star scale. Average ratings and vote counts are displayed. Users can also clear their vote.
 *   **Dynamic Ingredient Scaling:** Adjust serving sizes on the fly, and ingredient quantities will scale automatically.
 *   **Shopping List:** Add ingredients from recipes to a consolidated shopping list.
@@ -34,7 +34,7 @@ Oppskrift is a modern, web-based application designed to help you manage your pe
 *   **Frontend:** Next.js (App Router), React, TypeScript
 *   **Styling:** Tailwind CSS, ShadCN UI
 *   **Backend & Database:** NextAuth.js, Prisma (SQLite)
-*   **AI Integration:** Genkit (using Mistral AI models)
+*   **AI Integration:** Genkit (using any OpenAI-compatible API via `@genkit-ai/compat-oai`)
 *   **Internationalization:** `i18next` pattern with JSON locale files (adapted for a simpler context-based approach).
 *   **Drag & Drop:** `@hello-pangea/dnd` for reordering ingredients and steps.
 
@@ -51,10 +51,20 @@ To enable full functionality, especially AI-powered features, you may need to co
 ```
 # .env.local
 
-# Optional: Your Mistral AI API Key for AI features (e.g., recipe parsing).
-# If not provided, AI features will be disabled.
-# Get your key from Mistral AI Console: https://console.mistral.ai/
-MISTRAL_API_KEY=your_mistral_api_key_here
+# AI configuration (OpenAI-compatible API). Required for AI features (recipe parsing).
+# OPENAI_API_KEY: API key for your provider.
+# OPENAI_BASE_URL: Omit for OpenAI. Set for OpenRouter, Ollama, Together, Groq, etc.
+# OPENAI_MODEL: Default model for text parsing (default: gpt-4o).
+# OPENAI_VISION_MODEL: Model for image/OCR (default: same as OPENAI_MODEL).
+#
+# Examples:
+#   OpenAI:      OPENAI_API_KEY=sk-...
+#   OpenRouter:  OPENAI_API_KEY=sk-or-...  OPENAI_BASE_URL=https://openrouter.ai/api/v1  OPENAI_MODEL=anthropic/claude-3.5-sonnet
+#   Ollama:      OPENAI_API_KEY=ollama  OPENAI_BASE_URL=http://localhost:11434/v1  OPENAI_MODEL=llama3.2
+OPENAI_API_KEY=your_api_key_here
+OPENAI_BASE_URL=
+OPENAI_MODEL=
+OPENAI_VISION_MODEL=
 
 # A random string used to hash tokens, sign/encrypt cookies, and generate a key for the NextAuth.js.
 # You can generate a strong secret using `openssl rand -base64 32` or `openssl rand -hex 32`.
